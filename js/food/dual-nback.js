@@ -1,40 +1,43 @@
-        // 雙重 N-back 遊戲
-        // =============================================================
+(function (global) {
+    'use strict';
 
-        const DUAL_NBACK_SEQUENCE_LENGTH = 50;
+    // =============================================================
+    // 雙重 N-back — mount + lifecycle
+    // =============================================================
+    //
+    // Pure logic/tables (dual-nback-logic.js) and all direct DOM interaction
+    // (dual-nback-view.js) are injected via deps. This module keeps the game
+    // lifecycle: state, sequences, timing, scoring, navigation.
 
-        const DUAL_MODALITY_LABELS = {
-            image: '圖片',
-            position: '位置',
-            color: '顏色',
-            audio: '聲音'
-        };
+    function mount(root, deps) {
+        deps = deps || {};
+        var doc = (root && root.ownerDocument) || root || (typeof document !== 'undefined' ? document : null);
+        if (!doc) return null;
 
-        const DUAL_POSITION_GRIDS = {
-            '2x1': { cols: 2, rows: 1 },
-            '3x1': { cols: 3, rows: 1 },
-            '2x2': { cols: 2, rows: 2 },
-            '3x2': { cols: 3, rows: 2 },
-            '3x3': { cols: 3, rows: 3 }
-        };
+        var foodData = deps.foodData || (typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null);
+        if (!foodData) return null;
+        var logic = deps.logic || (typeof global.CognitiveDualNbackLogic !== 'undefined' ? global.CognitiveDualNbackLogic : null);
+        var view = deps.view || (typeof global.CognitiveDualNbackView !== 'undefined' ? global.CognitiveDualNbackView : null);
+        var sequence = deps.sequence || (typeof global.CognitiveSequence !== 'undefined' ? global.CognitiveSequence : null);
+        var activityFactory = deps.activity || (typeof global.CognitiveActivity !== 'undefined' ? global.CognitiveActivity : null);
+        var nbackAudioMap = deps.nbackAudioMap || (typeof global.CognitiveNbackAudioMap !== 'undefined' ? global.CognitiveNbackAudioMap : null);
+        var message = deps.message || (typeof global.CognitiveMessage !== 'undefined' ? global.CognitiveMessage : null);
+        var feedback = deps.feedback || (typeof global.CognitiveFeedback !== 'undefined' ? global.CognitiveFeedback : null);
+        var router = deps.router || (typeof global.CognitiveRouter !== 'undefined' ? global.CognitiveRouter : null);
+        var keyboard = deps.keyboard || (typeof global.CognitiveKeyboard !== 'undefined' ? global.CognitiveKeyboard : null);
+        var audio = deps.audio || (typeof global.CognitiveAudio !== 'undefined' ? global.CognitiveAudio : null);
+        var hideOverlay = deps.hideOverlay || (typeof global.hideOverlay === 'function' ? global.hideOverlay : null);
 
-        const DUAL_COLOR_PALETTES = {
-            '6': [
-                { name: '紅色', css: '#e53935' },
-                { name: '橙色', css: '#fb8c00' },
-                { name: '黃色', css: '#fdd835' },
-                { name: '綠色', css: '#43a047' },
-                { name: '藍色', css: '#1e88e5' },
-                { name: '紫色', css: '#8e24aa' }
-            ],
-            '3': [
-                { name: '紅色', css: '#e53935' },
-                { name: '綠色', css: '#43a047' },
-                { name: '藍色', css: '#1e88e5' }
-            ]
-        };
+        if (!logic || !view || !sequence || !activityFactory) return null;
+        var FOOD_DATA = foodData.FOOD_DATA;
+        var DUAL_SEQ_LEN = logic.DUAL_NBACK_SEQUENCE_LENGTH;
+        var DUAL_LABELS = logic.DUAL_MODALITY_LABELS;
+        var DUAL_GRIDS = logic.DUAL_POSITION_GRIDS;
+        var DUAL_PALETTES = logic.DUAL_COLOR_PALETTES;
 
-        const dualNbackState = {
+        var els = view.createDualNbackEls(doc);
+
+        var state = {
             modalities: [],
             positionGrid: '3x3',
             colorPalette: '6',
@@ -51,455 +54,293 @@
             interval: 0
         };
 
-        const dualNbackGame = document.getElementById('dualNbackGame');
-        const dualNbackSettings = document.getElementById('dualNbackSettings');
-        const dualNbackModeSelect = document.getElementById('nbackModeSelect');
-        const dualNbackStage = document.getElementById('dualNbackStage');
-        const dualNbackGrid = document.getElementById('dualNbackGrid');
-        const dualNbackCard = document.getElementById('dualNbackCard');
-        const dualNbackImage = document.getElementById('dualNbackImage');
-        const dualNbackScoreNum = document.getElementById('dualNbackScoreNum');
-        const dualNbackPlayBtn = document.getElementById('dualNbackPlayBtn');
-        const dualNbackSpeedDisplay = document.getElementById('dualNbackSpeedDisplay');
-        const dualNbackSpeedDown = document.getElementById('dualNbackSpeedDown');
-        const dualNbackSpeedUp = document.getElementById('dualNbackSpeedUp');
-        const dualNbackNSelect = document.getElementById('dualNbackNSelect');
-        const dualNbackMatchButtons = document.getElementById('dualNbackMatchButtons');
-        const dualNbackBackBtn = document.getElementById('dualNbackBackBtn');
-        const dualNbackSettingsBackBtn = document.getElementById('dualNbackSettingsBackBtn');
-        const nbackModeBackBtn = document.getElementById('nbackModeBackBtn');
-        const singleNbackBtn = document.getElementById('singleNbackBtn');
-        const dualNbackBtn = document.getElementById('dualNbackBtn');
+        var controller = new AbortController();
+        var listenOpts = { signal: controller.signal };
 
-        const dualModality1Select = document.getElementById('dualModality1Select');
-        const dualModality2Select = document.getElementById('dualModality2Select');
-        const dualPositionSettings = document.getElementById('dualPositionSettings');
-        const dualPositionGridSelect = document.getElementById('dualPositionGridSelect');
-        const dualColorSettings = document.getElementById('dualColorSettings');
-        const dualColorPaletteSelect = document.getElementById('dualColorPaletteSelect');
-        const dualStartBtn = document.getElementById('dualStartBtn');
-
-        let dualFeedbackTimer = null;
-        const dualNbackActivity = window.CognitiveActivity.create({
+        var dualNbackActivity = activityFactory.create({
             minInterval: 2000,
             maxInterval: 4000,
             speedSteps: 10,
-            defaultSpeed: dualNbackState.speed,
-            tick: function () { if (dualNbackState.isPlaying) nextDualNbackTrial(true); },
+            defaultSpeed: state.speed,
+            tick: function () { if (state.isPlaying) nextDualNbackTrial(true); },
             onPause: syncDualNbackSessionUi,
             onResume: syncDualNbackSessionUi
         });
 
-        function getDualFoodId(item) {
-            return item.id || item.name;
-        }
-
-        function getDualModalityValue(modality, value) {
-            if (modality === 'image' || modality === 'audio') return getDualFoodId(value);
-            if (modality === 'color') return value.name;
-            return value;
-        }
-
-        function cloneDualModalityValue(modality, value) {
-            if (modality === 'image' || modality === 'audio') return value ? { ...value } : value;
-            if (modality === 'color') return value ? { ...value } : value;
-            return value;
-        }
-
-        function getDualModalityChoices(modality) {
-            if (modality === 'image' || modality === 'audio') return FOOD_DATA;
-            if (modality === 'position') {
-                const grid = DUAL_POSITION_GRIDS[dualNbackState.positionGrid] || DUAL_POSITION_GRIDS['3x3'];
-                return Array.from({ length: grid.cols * grid.rows }, (_, index) => index);
-            }
-            if (modality === 'color') {
-                return DUAL_COLOR_PALETTES[dualNbackState.colorPalette] || DUAL_COLOR_PALETTES['6'];
-            }
-            return [];
-        }
-
         function buildDualSequences() {
-            dualNbackState.sequences = {};
-            if (!window.CognitiveSequence) return;
-            dualNbackState.modalities.forEach(modality => {
-                const choices = getDualModalityChoices(modality);
-                dualNbackState.sequences[modality] = window.CognitiveSequence.generateTrials({
-                    choices: choices,
-                    n: dualNbackState.n,
-                    length: DUAL_NBACK_SEQUENCE_LENGTH,
-                    matchProbability: window.CognitiveSequence.matchProbability,
-                    cloneValue: value => cloneDualModalityValue(modality, value),
-                    keyFor: value => getDualModalityValue(modality, value)
-                });
-            });
+            state.sequences = logic.generateDualSequences(state.modalities, state.n, DUAL_SEQ_LEN, state.positionGrid, state.colorPalette, FOOD_DATA, DUAL_GRIDS, DUAL_PALETTES, sequence);
         }
 
         function syncDualNbackPlayButton() {
-            dualNbackPlayBtn.classList.toggle('playing', dualNbackState.isPlaying);
+            els.playBtn.classList.toggle('playing', state.isPlaying);
         }
 
         function syncDualNbackSessionUi() {
-            const active = dualNbackState.isPlaying && dualNbackActivity.isRunning();
-            dualNbackPlayBtn.classList.toggle('playing', active);
-        }
-
-        function getDualVisibleContent() {
-            return dualNbackState.modalities.indexOf('position') !== -1 ? dualNbackGrid : dualNbackCard;
-        }
-
-        function renderDualGrid() {
-            const gridInfo = DUAL_POSITION_GRIDS[dualNbackState.positionGrid] || DUAL_POSITION_GRIDS['3x3'];
-            const hasImage = dualNbackState.modalities.indexOf('image') !== -1;
-            const hasColor = dualNbackState.modalities.indexOf('color') !== -1;
-            const position = dualNbackState.currentItems.position || 0;
-            const imageItem = dualNbackState.currentItems.image;
-            const colorItem = dualNbackState.currentItems.color;
-
-            dualNbackGrid.className = `dual-grid dual-grid-${dualNbackState.positionGrid}`;
-            dualNbackGrid.style.setProperty('--grid-cols', gridInfo.cols);
-            dualNbackGrid.style.setProperty('--grid-rows', gridInfo.rows);
-            dualNbackGrid.innerHTML = '';
-
-            for (let i = 0; i < gridInfo.cols * gridInfo.rows; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'dual-grid-cell' + (i === position ? ' active' : '');
-                if (i === position && hasImage && imageItem) {
-                    const img = document.createElement('img');
-                    img.src = imageItem.image;
-                    img.alt = imageItem.name;
-                    img.setAttribute('aria-label', imageItem.name);
-                    cell.appendChild(img);
-                } else if (i === position && hasColor && colorItem) {
-                    cell.classList.add('color-cell');
-                    cell.style.background = colorItem.css;
-                } else if (i === position) {
-                    cell.classList.add('position-only');
-                }
-                dualNbackGrid.appendChild(cell);
-            }
-        }
-
-        function renderDualCard() {
-            const hasImage = dualNbackState.modalities.indexOf('image') !== -1;
-            const hasColor = dualNbackState.modalities.indexOf('color') !== -1;
-            const imageItem = dualNbackState.currentItems.image;
-            const colorItem = dualNbackState.currentItems.color;
-
-            dualNbackCard.classList.toggle('color-card', hasColor);
-            dualNbackCard.style.background = hasColor && colorItem ? colorItem.css : '';
-            if (hasImage && imageItem) {
-                dualNbackImage.style.display = 'block';
-                dualNbackImage.src = imageItem.image;
-                dualNbackImage.alt = imageItem.name;
-                dualNbackImage.setAttribute('aria-label', imageItem.name);
-            } else {
-                dualNbackImage.style.display = 'none';
-                dualNbackImage.removeAttribute('src');
-                dualNbackImage.alt = '';
-            }
+            const active = state.isPlaying && dualNbackActivity.isRunning();
+            els.playBtn.classList.toggle('playing', active);
         }
 
         function playDualNbackAudio() {
-            if (dualNbackState.modalities.indexOf('audio') === -1) return;
-            const item = dualNbackState.currentItems.audio;
-            if (!item || !window.CognitiveNbackAudioMap) return;
-            const src = window.CognitiveNbackAudioMap[getDualFoodId(item)] ||
-                        window.CognitiveNbackAudioMap[item.name];
+            if (state.modalities.indexOf('audio') === -1) return;
+            const item = state.currentItems.audio;
+            if (!item || !nbackAudioMap) return;
+            const src = nbackAudioMap[logic.getDualFoodId(item)] ||
+                        nbackAudioMap[item.name];
             if (!src) return;
-            CognitiveAudio.stopFile();
+            audio.stopFile();
             // Edge clips are generated at 0.5x, so play them at normal speed.
-            CognitiveAudio.playFile(src, {
+            audio.playFile(src, {
                 volume: 1,
                 preservesPitch: true,
-                playbackRate: dualNbackState.audioRate || 1,
+                playbackRate: state.audioRate || 1,
                 bypassSfx: true
             });
         }
 
         function commitDualNbackTrial(index, playAudio) {
-            if (!dualNbackState.modalities.length) return;
-            dualNbackState.currentIndex = index;
-            dualNbackState.currentItems = {};
-            dualNbackState.matchLocked = {};
+            if (!state.modalities.length) return;
+            state.currentIndex = index;
+            state.currentItems = {};
+            state.matchLocked = {};
 
-            dualNbackState.modalities.forEach(modality => {
-                const trial = dualNbackState.sequences[modality][index];
-                dualNbackState.currentItems[modality] = trial ? trial.value : undefined;
-                dualNbackState.matchLocked[modality] = false;
+            state.modalities.forEach(modality => {
+                const trial = state.sequences[modality][index];
+                state.currentItems[modality] = trial ? trial.value : undefined;
+                state.matchLocked[modality] = false;
             });
 
-            const showGrid = dualNbackState.modalities.indexOf('position') !== -1;
-            dualNbackGrid.classList.toggle('hidden', !showGrid);
-            dualNbackCard.classList.toggle('hidden', showGrid);
+            const showGrid = state.modalities.indexOf('position') !== -1;
+            els.grid.classList.toggle('hidden', !showGrid);
+            els.card.classList.toggle('hidden', showGrid);
             if (showGrid) {
-                renderDualGrid();
+                view.renderDualGrid(doc, els, { positionGrid: state.positionGrid, positionGrids: DUAL_GRIDS, modalities: state.modalities, currentItems: state.currentItems });
             } else {
-                renderDualCard();
+                view.renderDualCard(doc, els, {
+                    modalities: state.modalities,
+                    currentItems: state.currentItems
+                });
             }
             if (playAudio) playDualNbackAudio();
         }
 
         function nextDualNbackTrial() {
-            if (!dualNbackState.modalities.length) return;
+            if (!state.modalities.length) return;
             dualNbackActivity.hold();
-            dualNbackState.currentIndex++;
-            if (dualNbackState.currentIndex >= DUAL_NBACK_SEQUENCE_LENGTH) {
+            state.currentIndex++;
+            if (state.currentIndex >= DUAL_SEQ_LEN) {
                 buildDualSequences();
-                dualNbackState.currentIndex = 0;
+                state.currentIndex = 0;
             }
-            commitDualNbackTrial(dualNbackState.currentIndex, true);
+            commitDualNbackTrial(state.currentIndex, true);
             dualNbackActivity.reset();
         }
-
         function pauseDual() {
             dualNbackActivity.pause();
-            dualNbackState.isPlaying = false;
+            state.isPlaying = false;
             syncDualNbackPlayButton();
-            CognitiveAudio.stopFile();
-            hideOverlay();
-            window.CognitiveFeedback.clear(dualNbackStage);
+            audio.stopFile();
+            if (hideOverlay) hideOverlay();
+            feedback.clear(els.stage);
         }
 
         function startDual() {
-            if (dualNbackState.isPlaying) {
+            if (state.isPlaying) {
                 pauseDual();
                 return;
             }
             buildDualSequences();
-            dualNbackState.currentIndex = 0;
-            dualNbackState.score = 0;
-            dualNbackState.totalTrials = 0;
-            dualNbackState.isPlaying = true;
+            state.currentIndex = 0;
+            state.score = 0;
+            state.totalTrials = 0;
+            state.isPlaying = true;
             syncDualNbackPlayButton();
             commitDualNbackTrial(0, true);
-            updateDualNbackScore();
-            dualNbackActivity.start(dualNbackState.speed);
+            view.setScore(els.scoreNum, state.score);
+            dualNbackActivity.start(state.speed);
         }
 
-        function flashDualNbackFeedback(correct, modality) {
-            const visible = getDualVisibleContent();
-            const targets = visible === dualNbackGrid
-                ? Array.from(visible.querySelectorAll('.dual-grid-cell.active'))
-                : [visible];
-            clearTimeout(dualFeedbackTimer);
-            targets.forEach(function (target) {
-                target.classList.remove('feedback-correct', 'feedback-wrong');
-            });
-            targets.forEach(function (target) {
-                target.classList.add(correct ? 'feedback-correct' : 'feedback-wrong');
-            });
-            dualFeedbackTimer = setTimeout(function() {
-                targets.forEach(function (target) {
-                    target.classList.remove('feedback-correct', 'feedback-wrong');
-                });
-            }, 600);
+        function resetDual() {
+            if (dualNbackActivity) dualNbackActivity.stop();
+            state.isPlaying = false;
+            state.sequences = {};
+            state.currentIndex = -1;
+            state.currentItems = {};
+            state.matchLocked = {};
+            state.score = 0;
+            state.totalTrials = 0;
+            view.setScore(els.scoreNum, state.score);
+            syncDualNbackPlayButton();
+            if (audio && audio.stopFile) audio.stopFile();
+            if (hideOverlay) hideOverlay();
+            feedback.clear(els.stage);
         }
 
         function handleDualNbackMatch(modality) {
-            if (dualNbackState.currentIndex < 0 ||
-                dualNbackState.matchLocked[modality]) return;
+            if (state.currentIndex < 0 ||
+                state.matchLocked[modality]) return;
 
-            const trial = dualNbackState.sequences[modality][dualNbackState.currentIndex];
+            const trial = state.sequences[modality][state.currentIndex];
             const correct = Boolean(trial && trial.isMatch);
 
-            dualNbackState.matchLocked[modality] = true;
-            dualNbackState.totalTrials++;
+            state.matchLocked[modality] = true;
+            state.totalTrials++;
             if (correct) {
-                dualNbackState.score++;
-                CognitiveAudio.play('correct');
+                state.score++;
+                audio.play('correct');
             } else {
-                CognitiveAudio.play('wrong');
+                audio.play('wrong');
             }
-            updateDualNbackScore();
-            flashDualNbackFeedback(correct, modality);
-            window.CognitiveFeedback.show(dualNbackStage, correct ? '✅ 正確！' : '❌ 再試一次！', correct ? 'correct' : 'wrong');
-        }
-
-        function updateDualNbackScore() {
-            dualNbackScoreNum.textContent = dualNbackState.score;
+            view.setScore(els.scoreNum, state.score);
+            view.flashDualFeedback(els, view.getDualVisibleContent(els, state.modalities), correct);
+            feedback.show(els.stage, correct ? '✅ 正確！' : '❌ 再試一次！', correct ? 'correct' : 'wrong');
         }
 
         function changeDualNbackSpeed(delta) {
-            let newSpeed = dualNbackState.speed + delta;
+            let newSpeed = state.speed + delta;
             if (newSpeed < 1) newSpeed = 1;
             if (newSpeed > 10) newSpeed = 10;
-            dualNbackState.speed = newSpeed;
-            dualNbackSpeedDisplay.textContent = newSpeed;
+            state.speed = newSpeed;
+            els.speedDisplay.textContent = newSpeed;
             dualNbackActivity.setSpeed(newSpeed);
-            if (dualNbackState.isPlaying) dualNbackActivity.reset();
-        }
-
-        function showDualNbackInstruction() {
-            const labels = dualNbackState.modalities.map(modality => DUAL_MODALITY_LABELS[modality]);
-            window.CognitiveMessage.show({
-                title: `看看${labels.join('和')}與上 ${dualNbackState.n} 張是否相同`,
-                subtitle: '',
-                extraLarge: true,
-                pauseTimer: false
-            });
+            if (state.isPlaying) dualNbackActivity.reset();
         }
 
         function changeDualNbackN(newN) {
-            if (newN === dualNbackState.n) return;
-            const wasPlaying = dualNbackState.isPlaying;
+            if (newN === state.n) return;
+            const wasPlaying = state.isPlaying;
             if (wasPlaying) pauseDual();
-            dualNbackState.n = newN;
-            dualNbackNSelect.value = String(newN);
+            state.n = newN;
+            els.nSelect.value = String(newN);
             buildDualSequences();
-            dualNbackState.currentIndex = 0;
-            dualNbackState.score = 0;
-            dualNbackState.totalTrials = 0;
-            updateDualNbackScore();
+            state.currentIndex = 0;
+            state.score = 0;
+            state.totalTrials = 0;
+            view.setScore(els.scoreNum, state.score);
             commitDualNbackTrial(0, false);
-            showDualNbackInstruction();
-        }
-
-        function buildDualMatchButtons() {
-            dualNbackMatchButtons.innerHTML = '';
-            dualNbackState.modalities.forEach(modality => {
-                const btn = document.createElement('button');
-                btn.className = 'dual-match-btn';
-                btn.dataset.modality = modality;
-                btn.textContent = DUAL_MODALITY_LABELS[modality];
-                btn.addEventListener('click', function() {
-                    handleDualNbackMatch(modality);
-                });
-                dualNbackMatchButtons.appendChild(btn);
-            });
-        }
-
-        function updateDualSettingsState() {
-            const modality1 = dualModality1Select.value;
-            const modality2 = dualModality2Select.value;
-            const needsPosition = modality1 === 'position' || modality2 === 'position';
-            const needsColor = modality1 === 'color' || modality2 === 'color';
-
-            dualPositionSettings.classList.toggle('hidden', !needsPosition);
-            dualColorSettings.classList.toggle('hidden', !needsColor);
-
-            if (needsPosition && !dualPositionGridSelect.value) dualPositionGridSelect.value = '3x3';
-            if (needsColor && !dualColorPaletteSelect.value) dualColorPaletteSelect.value = '6';
-
-            const valid = Boolean(modality1 && modality2 && modality1 !== modality2 &&
-                (!needsPosition || dualPositionGridSelect.value) &&
-                (!needsColor || dualColorPaletteSelect.value));
-            dualStartBtn.disabled = !valid;
-            dualStartBtn.style.opacity = valid ? '1' : '0.45';
+            view.showInstruction(message, state.modalities, DUAL_LABELS, state.n);
         }
 
         function startDualFromSettings() {
-            const modality1 = dualModality1Select.value;
-            const modality2 = dualModality2Select.value;
+            const modality1 = els.modality1Select.value;
+            const modality2 = els.modality2Select.value;
             if (!modality1 || !modality2 || modality1 === modality2) return;
             const needsPosition = modality1 === 'position' || modality2 === 'position';
             const needsColor = modality1 === 'color' || modality2 === 'color';
-            if (needsPosition && !dualPositionGridSelect.value) return;
-            if (needsColor && !dualColorPaletteSelect.value) return;
+            if (needsPosition && !els.positionGridSelect.value) return;
+            if (needsColor && !els.colorPaletteSelect.value) return;
 
-            dualNbackState.modalities = [modality1, modality2];
-            dualNbackState.n = parseInt(dualNbackNSelect.value, 10) || 1;
-            dualNbackState.positionGrid = dualPositionGridSelect.value || '3x3';
-            dualNbackState.colorPalette = dualColorPaletteSelect.value || '6';
-            dualNbackState.audioRate = 1;
-            dualNbackState.speed = 5;
-            dualNbackSpeedDisplay.textContent = '5';
-            dualNbackNSelect.value = String(dualNbackState.n);
-            buildDualMatchButtons();
+            state.modalities = [modality1, modality2];
+            state.n = parseInt(els.nSelect.value, 10) || 1;
+            state.positionGrid = els.positionGridSelect.value || '3x3';
+            state.colorPalette = els.colorPaletteSelect.value || '6';
+            state.audioRate = 1;
+            state.speed = 5;
+            els.speedDisplay.textContent = '5';
+            els.nSelect.value = String(state.n);
+            view.buildDualMatchButtons(doc, els, state.modalities, DUAL_LABELS, handleDualNbackMatch);
 
-            if (window.CognitiveRouter) {
-                window.CognitiveRouter.navigate('dualNbackGame');
+            if (router) {
+                router.navigate('dualNbackGame');
             }
         }
 
         function prepareDualNbackGame() {
-            if (!dualNbackState.modalities.length) return;
+            if (!state.modalities.length) return;
             pauseDual();
             buildDualSequences();
-            dualNbackState.currentIndex = 0;
-            dualNbackState.score = 0;
-            dualNbackState.totalTrials = 0;
-            updateDualNbackScore();
+            state.currentIndex = 0;
+            state.score = 0;
+            state.totalTrials = 0;
+            view.setScore(els.scoreNum, state.score);
             commitDualNbackTrial(0, false);
-            showDualNbackInstruction();
+            view.showInstruction(message, state.modalities, DUAL_LABELS, state.n);
         }
 
-        dualNbackPlayBtn.addEventListener('click', startDual);
+        function destroyDual() {
+            if (dualNbackActivity) dualNbackActivity.stop();
+            try { controller.abort(); } catch (e) { /* already aborted */ }
+            state.isPlaying = false;
+        }
+        function goBack() { if (router) router.goBack(); }
 
-        if (window.CognitiveKeyboard) {
-            window.CognitiveKeyboard.registerScreen('dualNbackGame', {
+        view.bindDualControls(els, keyboard, listenOpts, {
+            onPlayPause: startDual,
+            onAdvance: nextDualNbackTrial,
+            onSpeedDown: function () { changeDualNbackSpeed(-1); },
+            onSpeedUp: function () { changeDualNbackSpeed(1); },
+            onNChange: function (value) { changeDualNbackN(parseInt(value, 10)); },
+            onBack: goBack,
+            onSettingsBack: goBack,
+            onModeBack: goBack,
+            onSingle: function () { if (router) router.navigate('nbackGame'); },
+            onDual: function () { if (router) router.navigate('dualNbackSettings'); },
+            onSettingsChange: function () { view.updateDualSettingsState(els); },
+            onStart: startDualFromSettings,
+            keyboard: {
                 j: function () {
-                    const modalities = dualNbackState.modalities;
+                    const modalities = state.modalities;
                     if (modalities[0]) handleDualNbackMatch(modalities[0]);
                 },
                 k: function () {
-                    const modalities = dualNbackState.modalities;
+                    const modalities = state.modalities;
                     if (modalities[1]) handleDualNbackMatch(modalities[1]);
                 },
+                space: nextDualNbackTrial,
                 '-': function () { changeDualNbackSpeed(-1); },
                 '=': function () { changeDualNbackSpeed(1); },
                 p: startDual
-            });
-        }
-
-        dualNbackCard.addEventListener('click', function() {
-            nextDualNbackTrial();
-        });
-
-        dualNbackGrid.addEventListener('click', function() {
-            nextDualNbackTrial();
-        });
-
-        dualNbackSpeedDown.addEventListener('click', function() { changeDualNbackSpeed(-1); });
-        dualNbackSpeedUp.addEventListener('click', function() { changeDualNbackSpeed(1); });
-
-        dualNbackNSelect.addEventListener('change', function() {
-            changeDualNbackN(parseInt(this.value, 10));
-        });
-
-        dualNbackBackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) {
-                window.CognitiveRouter.goBack();
             }
         });
 
-        dualNbackSettingsBackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) window.CognitiveRouter.goBack();
-        });
+        els.speedDisplay.textContent = state.speed;
+        els.nSelect.value = String(state.n);
+        view.updateDualSettingsState(els);
 
-        nbackModeBackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) window.CognitiveRouter.goBack();
-        });
-
-        singleNbackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) window.CognitiveRouter.navigate('nbackGame');
-        });
-
-        dualNbackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) window.CognitiveRouter.navigate('dualNbackSettings');
-        });
-
-        dualModality1Select.addEventListener('change', updateDualSettingsState);
-        dualModality2Select.addEventListener('change', updateDualSettingsState);
-        dualPositionGridSelect.addEventListener('change', updateDualSettingsState);
-        dualColorPaletteSelect.addEventListener('change', updateDualSettingsState);
-        dualStartBtn.addEventListener('click', startDualFromSettings);
-
-        dualNbackSpeedDisplay.textContent = dualNbackState.speed;
-        dualNbackNSelect.value = String(dualNbackState.n);
-        updateDualSettingsState();
-
-        if (window.CognitiveRouter) {
-            window.CognitiveRouter.defineScreen('nbackModeSelect', {
+        if (router) {
+            router.defineScreen('nbackModeSelect', {
                 back: 'home'
             });
-            window.CognitiveRouter.defineScreen('dualNbackSettings', {
+            router.defineScreen('dualNbackSettings', {
                 back: 'nbackModeSelect'
             });
-            window.CognitiveRouter.defineScreen('dualNbackGame', {
+            router.defineScreen('dualNbackGame', {
                 enter: prepareDualNbackGame,
                 exit: pauseDual,
                 back: 'dualNbackSettings'
             });
         }
 
-        // =============================================================
+        return {
+            start: startDual,
+            pause: pauseDual,
+            reset: resetDual,
+            destroy: destroyDual
+        };
+    }
+
+    var api = { mount: mount };
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = api;
+    }
+
+    if (typeof window !== 'undefined') {
+        window.CognitiveDualNback = api;
+        // Transitional self-mount preserving the original load-time behaviour.
+        // Later strangler steps move this call into the router/orchestrator.
+        api.mount(document, {
+            foodData: window.CognitiveFoodData,
+            logic: window.CognitiveDualNbackLogic,
+            view: window.CognitiveDualNbackView,
+            sequence: window.CognitiveSequence,
+            activity: window.CognitiveActivity,
+            nbackAudioMap: window.CognitiveNbackAudioMap,
+            message: window.CognitiveMessage,
+            feedback: window.CognitiveFeedback,
+            router: window.CognitiveRouter,
+            keyboard: window.CognitiveKeyboard,
+            audio: window.CognitiveAudio,
+            hideOverlay: window.hideOverlay
+        });
+    }
+})(typeof window !== 'undefined' ? window : globalThis);

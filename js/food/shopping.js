@@ -1,8 +1,46 @@
-        // =============================================================
-        // 第五部分：買餸記憶遊戲
-        // =============================================================
+(function (global) {
+    'use strict';
 
-        const shoppingState = {
+    // =============================================================
+    // 第五部分：買餸記憶遊戲 — mount + lifecycle
+    // =============================================================
+    //
+    // Pure round logic + option tables (shopping-logic.js) and all direct DOM
+    // interaction (shopping-view.js) are injected via deps. This module keeps
+    // the game-flow state machine: list/order/recall phases, countdown
+    // timing, scoring, navigation.
+
+    function mount(root, deps) {
+        deps = deps || {};
+        var doc = (root && root.ownerDocument) || root || (typeof document !== 'undefined' ? document : null);
+        if (!doc) return null;
+
+        var foodData = deps.foodData || (typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null);
+        if (!foodData) return null;
+        var logic = deps.logic || (typeof global.CognitiveShoppingLogic !== 'undefined' ? global.CognitiveShoppingLogic : null);
+        var view = deps.view || (typeof global.CognitiveShoppingView !== 'undefined' ? global.CognitiveShoppingView : null);
+        var prefs = deps.prefs || (typeof global.CognitivePrefs !== 'undefined' ? global.CognitivePrefs : null);
+        var activityTimer = deps.activityTimer || (typeof global.CognitiveActivityTimer !== 'undefined' ? global.CognitiveActivityTimer : null);
+        var message = deps.message || (typeof global.CognitiveMessage !== 'undefined' ? global.CognitiveMessage : null);
+        var feedback = deps.feedback || (typeof global.CognitiveFeedback !== 'undefined' ? global.CognitiveFeedback : null);
+        var router = deps.router || (typeof global.CognitiveRouter !== 'undefined' ? global.CognitiveRouter : null);
+        var audio = deps.audio || (typeof global.CognitiveAudio !== 'undefined' ? global.CognitiveAudio : null);
+        var openMagnify = deps.openMagnify || (typeof global.openMagnify === 'function' ? global.openMagnify : null);
+        var syncTopBarCentering = deps.syncTopBarCentering || (typeof global.syncTopBarCentering === 'function' ? global.syncTopBarCentering : null);
+        var nameVisibility = deps.nameVisibility || null;
+
+        if (!logic || !view) return null;
+        var FOOD_DATA = foodData.FOOD_DATA;
+        var shuffle = foodData.shuffle;
+        var getFoodId = foodData.getFoodId;
+        var STANDARD_MEMORY_OPTIONS = logic.STANDARD_MEMORY_OPTIONS;
+        var ORDER_MEMORY_OPTIONS = logic.ORDER_MEMORY_OPTIONS;
+        var ORDER_INDICATOR_MS = 1500;
+
+        var els = view.createShoppingEls(doc);
+        var lightbulb = view.createShoppingLightbulb(els);
+
+        var state = {
             listDisplayMode: 'image',
             listCount: 3,
             listRevealMode: 'manual',
@@ -29,485 +67,133 @@
             introShownOnce: false
         };
 
-        const shoppingGameScreen = document.getElementById('shoppingGame');
-        const shoppingSettingsScreen = document.getElementById('shoppingSettings');
-        const shoppingStage = document.getElementById('shoppingStage');
-        const shoppingPhaseText = document.getElementById('shoppingPhaseText');
-        const shoppingListView = document.getElementById('shoppingListView');
-        const shoppingRecallView = document.getElementById('shoppingRecallView');
-        const shoppingOrderView = document.getElementById('shoppingOrderView');
-        const shoppingListGrid = document.getElementById('shoppingListGrid');
-        const shoppingListHint = document.getElementById('shoppingListHint');
-        const shoppingRecallGrid = document.getElementById('shoppingRecallGrid');
-        const shoppingOrderItem = document.getElementById('shoppingOrderItem');
-        const shoppingOrderIndicator = document.getElementById('shoppingOrderIndicator');
-        const shoppingOrderLightbulb = document.getElementById('shoppingOrderLightbulb');
-        const shoppingScoreNum = document.getElementById('shoppingScoreNum');
-        const shoppingProgress = document.getElementById('shoppingProgress');
-        const shoppingTimer = document.getElementById('shoppingTimer');
-        const shoppingManualStartBtn = document.getElementById('shoppingManualStartBtn');
-        const shoppingNameToggleBtn = document.getElementById('shoppingNameToggleBtn');
-        const shoppingBackBtn = document.getElementById('shoppingBackBtn');
-        const shoppingSettingsBackBtn = document.getElementById('shoppingSettingsBackBtn');
-        const shoppingStartBtn = document.getElementById('shoppingStartBtn');
-        const shoppingListDisplayMode = document.getElementById('shoppingListDisplayMode');
-        const shoppingListCount = document.getElementById('shoppingListCount');
-        const shoppingMemoryTime = document.getElementById('shoppingMemoryTime');
-        const shoppingMemoryTimeLabel = document.getElementById('shoppingMemoryTimeLabel');
-        const shoppingMemoryTimeSuffix = document.getElementById('shoppingMemoryTimeSuffix');
-        const shoppingChoiceCount = document.getElementById('shoppingChoiceCount');
-        const shoppingOrderRequired = document.getElementById('shoppingOrderRequired');
-        const shoppingRecallTime = document.getElementById('shoppingRecallTime');
-        const shoppingSaveSettingsBtn = document.getElementById('shoppingSaveSettingsBtn');
+        var shoppingCountdownTimer = activityTimer ? activityTimer.create() : null;
 
-        let shoppingOrderBulbHideTimer = null;
-        const shoppingCountdownTimer = window.CognitiveActivityTimer.create();
-
-        const shoppingPreferences = window.CognitivePrefs
-            ? CognitivePrefs.load('cognitiveShoppingPrefs')
-            : null;
-
+        var shoppingPreferences = prefs ? prefs.load('cognitiveShoppingPrefs') : null;
         if (shoppingPreferences) {
-            shoppingListDisplayMode.value = shoppingPreferences.listDisplayMode;
-            shoppingListCount.value = String(shoppingPreferences.listCount);
-            shoppingMemoryTime.value = shoppingPreferences.memoryTime;
-            shoppingChoiceCount.value = String(shoppingPreferences.choiceCount);
-            shoppingOrderRequired.value = String(shoppingPreferences.orderRequired);
-            shoppingRecallTime.value = shoppingPreferences.recallTime;
+            els.listDisplayMode.value = shoppingPreferences.listDisplayMode;
+            els.listCount.value = String(shoppingPreferences.listCount);
+            els.memoryTime.value = shoppingPreferences.memoryTime;
+            els.choiceCount.value = String(shoppingPreferences.choiceCount);
+            els.orderRequired.value = String(shoppingPreferences.orderRequired);
+            els.recallTime.value = shoppingPreferences.recallTime;
         }
 
-        const STANDARD_MEMORY_OPTIONS = [
-            ['5', '5 秒'],
-            ['10', '10 秒'],
-            ['15', '15 秒'],
-            ['20', '20 秒'],
-            ['manual', '手動']
-        ];
-        const ORDER_MEMORY_OPTIONS = [
-            ['1', '1 秒'],
-            ['3', '3 秒'],
-            ['5', '5 秒'],
-            ['manual', '手動']
-        ];
+        var controller = new AbortController();
+        var listenOpts = { signal: controller.signal };
 
-        function setShoppingOrderLightbulbInitial(orderMode) {
-            const bulb = shoppingOrderLightbulb;
-            if (!bulb) return;
-
-            if (shoppingOrderBulbHideTimer) {
-                clearTimeout(shoppingOrderBulbHideTimer);
-                shoppingOrderBulbHideTimer = null;
-            }
-            bulb.classList.remove('visible', 'exit', 'flash');
-            bulb.classList.toggle('hidden', !orderMode);
-            if (orderMode) bulb.classList.add('visible');
+        function applyShoppingRound() {
+            const result = logic.buildShoppingRound(state.listCount, state.choiceCount, FOOD_DATA, shuffle, getFoodId);
+            state.list = result.list;
+            state.gridItems = result.gridItems;
+            state.completedNames = [];
+            state.nextOrderIndex = 0;
         }
-
-        function showShoppingOrderLightbulb() {
-            const bulb = shoppingOrderLightbulb;
-            if (!bulb) return;
-
-            if (shoppingOrderBulbHideTimer) {
-                clearTimeout(shoppingOrderBulbHideTimer);
-                shoppingOrderBulbHideTimer = null;
-            }
-            bulb.classList.remove('exit', 'flash', 'hidden');
-            void bulb.offsetWidth;
-            bulb.classList.add('visible');
-        }
-
-        function hideShoppingOrderLightbulb() {
-            const bulb = shoppingOrderLightbulb;
-            if (!bulb) return;
-
-            if (shoppingOrderBulbHideTimer) {
-                clearTimeout(shoppingOrderBulbHideTimer);
-                shoppingOrderBulbHideTimer = null;
-            }
-            if (bulb.classList.contains('hidden')) return;
-
-            bulb.classList.remove('visible', 'exit', 'flash');
-            void bulb.offsetWidth;
-            bulb.classList.add('exit');
-
-            shoppingOrderBulbHideTimer = window.setTimeout(function() {
-                bulb.classList.add('hidden');
-                bulb.classList.remove('exit');
-                shoppingOrderBulbHideTimer = null;
-            }, 450);
-        }
-
-        function updateShoppingMemoryOptions(animateBulb) {
-            const orderMode = shoppingOrderRequired.value === 'true';
-            const options = orderMode ? ORDER_MEMORY_OPTIONS : STANDARD_MEMORY_OPTIONS;
-            const currentValue = shoppingMemoryTime.value;
-            const validValues = options.map(option => option[0]);
-            shoppingMemoryTime.innerHTML = options.map(option =>
-                `<option value="${option[0]}">${option[1]}</option>`
-            ).join('');
-            shoppingMemoryTime.value = validValues.includes(currentValue) ? currentValue : 'manual';
-            if (shoppingMemoryTimeSuffix) {
-                shoppingMemoryTimeSuffix.classList.toggle('active', orderMode);
-                shoppingMemoryTimeSuffix.setAttribute('aria-hidden', orderMode ? 'false' : 'true');
-            }
-            if (animateBulb) {
-                showShoppingOrderLightbulb();
-            } else {
-                setShoppingOrderLightbulbInitial(orderMode);
-            }
-        }
-
-        shoppingOrderRequired.addEventListener('change', function() {
-            updateShoppingMemoryOptions(true);
-        });
-        shoppingMemoryTime.addEventListener('click', hideShoppingOrderLightbulb);
-        shoppingMemoryTime.addEventListener('change', hideShoppingOrderLightbulb);
-        updateShoppingMemoryOptions(shoppingOrderRequired.value === 'true');
-
-        if (shoppingSaveSettingsBtn) {
-            shoppingSaveSettingsBtn.addEventListener('click', function() {
-                const prefs = {
-                    listDisplayMode: shoppingListDisplayMode.value,
-                    listCount: parseInt(shoppingListCount.value, 10),
-                    memoryTime: shoppingMemoryTime.value,
-                    choiceCount: parseInt(shoppingChoiceCount.value, 10),
-                    orderRequired: shoppingOrderRequired.value === 'true',
-                    recallTime: shoppingRecallTime.value
-                };
-                if (window.CognitivePrefs) {
-                    CognitivePrefs.save('cognitiveShoppingPrefs', prefs);
-                }
-                window.CognitiveMessage.show({
-                    title: '設定已儲存',
-                    subtitle: '下次進入遊戲時會使用已儲存的偏好設定。',
-                    buttons: [{
-                        text: '好的',
-                        className: 'btn-stay',
-                        action: function() {}
-                    }],
-                    pauseTimer: false
-                });
-            });
-        }
-
-        function buildShoppingRound() {
-            const shuffled = shuffle(FOOD_DATA);
-            const list = [];
-            const seenNames = new Set();
-            for (const item of shuffled) {
-                if (list.length >= shoppingState.listCount) break;
-                if (seenNames.has(item.name)) continue;
-                seenNames.add(item.name);
-                list.push(item);
-            }
-            const listIds = new Set(list.map(item => getFoodId(item)));
-            const distractors = shuffle(FOOD_DATA.filter(item => !listIds.has(getFoodId(item)) && !seenNames.has(item.name)))
-                .slice(0, shoppingState.choiceCount - shoppingState.listCount);
-            shoppingState.list = list;
-            shoppingState.gridItems = shuffle([
-                ...list.map(item => ({ ...item, isTarget: true })),
-                ...distractors.map(item => ({ ...item, isTarget: false })),
-            ]);
-            shoppingState.completedNames = [];
-            shoppingState.nextOrderIndex = 0;
-        }
-
-        function renderShoppingList() {
-            const count = shoppingState.list.length;
-            shoppingListGrid.className = `shopping-list-grid count-${count}`;
-            shoppingListGrid.classList.toggle('name-mode', shoppingState.listDisplayMode === 'name');
-            shoppingListGrid.innerHTML = '';
-            const showImage = shoppingState.listDisplayMode !== 'name';
-            const showName = shoppingState.listDisplayMode === 'name' || (showImage && showNames);
-            shoppingListHint.textContent = '';
-
-            function createCard(item) {
-                const card = document.createElement('div');
-                card.className = 'shopping-list-card';
-
-                if (showImage) {
-                    const magnifyBtn = document.createElement('button');
-                    magnifyBtn.className = 'magnify-btn';
-                    magnifyBtn.textContent = '🔍';
-                    magnifyBtn.title = '放大圖片';
-                    magnifyBtn.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        openMagnify(item.image, item.name, showName);
-                    });
-                    card.appendChild(magnifyBtn);
-                    const imgWrapper = document.createElement('div');
-                    imgWrapper.className = 'food-image';
-                    const img = document.createElement('img');
-                    img.src = item.image;
-                    img.alt = item.name;
-                    img.loading = 'lazy';
-                    img.onerror = function() {
-                        this.style.display = 'none';
-                        const fallback = document.createElement('span');
-                        fallback.textContent = '🖼️';
-                        fallback.style.fontSize = 'calc(44px * var(--ui-scale))';
-                        this.parentElement.appendChild(fallback);
-                    };
-                    imgWrapper.appendChild(img);
-                    card.appendChild(imgWrapper);
-                } else {
-                    card.classList.add('name-only');
-                }
-
-                const nameSpan = document.createElement('div');
-                nameSpan.className = 'food-name';
-                nameSpan.textContent = item.name;
-                card.appendChild(nameSpan);
-                return card;
-            }
-
-            const topRow = document.createElement('div');
-            topRow.className = 'shopping-list-row';
-            const bottomRow = document.createElement('div');
-            bottomRow.className = 'shopping-list-row';
-
-            shoppingState.list.forEach((item, index) => {
-                const card = createCard(item);
-                if (count === 5) {
-                    (index < 3 ? topRow : bottomRow).appendChild(card);
-                } else {
-                    shoppingListGrid.appendChild(card);
-                }
-            });
-
-            if (count === 5) {
-                shoppingListGrid.appendChild(topRow);
-                shoppingListGrid.appendChild(bottomRow);
-            }
-        }
-
-        function renderShoppingOrderItem(index) {
-            const item = shoppingState.list[index];
-            if (!item) return;
-            const showImage = shoppingState.listDisplayMode !== 'name';
-            const showName = shoppingState.listDisplayMode === 'name' || (showImage && showNames);
-            shoppingOrderItem.innerHTML = '';
-            const card = document.createElement('div');
-            card.className = 'shopping-order-card';
-            if (!showImage) card.classList.add('name-only');
-
-            if (showImage) {
-                const magnifyBtn = document.createElement('button');
-                magnifyBtn.className = 'magnify-btn';
-                magnifyBtn.textContent = '🔍';
-                magnifyBtn.title = '放大圖片';
-                magnifyBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    openMagnify(item.image, item.name, showName);
-                });
-                card.appendChild(magnifyBtn);
-
-                const imgWrapper = document.createElement('div');
-                imgWrapper.className = 'food-image';
-                const img = document.createElement('img');
-                img.src = item.image;
-                img.alt = item.name;
-                img.onerror = function() {
-                    this.style.display = 'none';
-                    const fallback = document.createElement('span');
-                    fallback.textContent = '🖼️';
-                    fallback.style.fontSize = 'calc(72px * var(--ui-scale))';
-                    this.parentElement.appendChild(fallback);
-                };
-                imgWrapper.appendChild(img);
-                card.appendChild(imgWrapper);
-            }
-
-            const nameSpan = document.createElement('div');
-            nameSpan.className = 'food-name';
-            nameSpan.textContent = item.name;
-            card.appendChild(nameSpan);
-            shoppingOrderItem.appendChild(card);
-            applyNameVisibility();
-        }
-
-        const ORDER_INDICATOR_MS = 1500;
 
         function stopOrderTransition() {
-            shoppingState.orderTransitionToken++;
-            if (shoppingState.orderTransitionTimer) {
-                clearTimeout(shoppingState.orderTransitionTimer);
-                shoppingState.orderTransitionTimer = null;
+            state.orderTransitionToken++;
+            if (state.orderTransitionTimer) {
+                clearTimeout(state.orderTransitionTimer);
+                state.orderTransitionTimer = null;
             }
         }
-
         function showOrderItem(index) {
             stopShoppingTimer();
             stopOrderTransition();
-            if (index >= shoppingState.list.length) {
+            if (index >= state.list.length) {
                 finishOrderMemory();
                 return;
             }
-            shoppingState.orderIndex = index;
-            shoppingState.orderMemoryComplete = false;
-            shoppingManualStartBtn.classList.add('hidden');
-            shoppingOrderItem.innerHTML = '';
-            shoppingOrderIndicator.textContent = String(index + 1);
-            shoppingOrderIndicator.classList.remove('active');
-            void shoppingOrderIndicator.offsetWidth;
-            shoppingOrderIndicator.classList.add('active');
+            state.orderIndex = index;
+            state.orderMemoryComplete = false;
+            els.manualStartBtn.classList.add('hidden');
+            els.orderItem.innerHTML = '';
+            els.orderIndicator.textContent = String(index + 1);
+            els.orderIndicator.classList.remove('active');
+            void els.orderIndicator.offsetWidth;
+            els.orderIndicator.classList.add('active');
 
-            const token = ++shoppingState.orderTransitionToken;
-            shoppingState.orderTransitionTimer = setTimeout(function() {
-                if (token !== shoppingState.orderTransitionToken) return;
-                shoppingState.orderTransitionTimer = null;
-                const isLast = index === shoppingState.list.length - 1;
-                renderShoppingOrderItem(index);
-                if (shoppingState.listRevealMode === 'timer') {
-                    shoppingTimer.classList.remove('hidden');
-                    startShoppingCountdown(shoppingState.listSeconds, function() {
+            const token = ++state.orderTransitionToken;
+            state.orderTransitionTimer = setTimeout(function () {
+                if (token !== state.orderTransitionToken) return;
+                state.orderTransitionTimer = null;
+                const isLast = index === state.list.length - 1;
+                view.renderShoppingOrderItem(doc, els, {
+                    item: state.list[index],
+                    listDisplayMode: state.listDisplayMode,
+                    showNames: nameVisibility ? nameVisibility.isEnabled : false,
+                    onMagnify: openMagnify
+                });
+                if (nameVisibility) nameVisibility.apply();
+                if (state.listRevealMode === 'timer') {
+                    els.timer.classList.remove('hidden');
+                    startShoppingCountdown(state.listSeconds, function () {
                         showOrderItem(index + 1);
                     });
                 } else {
-                    shoppingTimer.classList.add('hidden');
+                    els.timer.classList.add('hidden');
                     updateShoppingTimer();
-                    shoppingManualStartBtn.textContent = isLast ? '▶ 開始揀選' : '下一張';
-                    if (isLast) shoppingState.orderMemoryComplete = true;
-                    shoppingManualStartBtn.classList.remove('hidden');
+                    els.manualStartBtn.textContent = isLast ? '▶ 開始揀選' : '下一張';
+                    if (isLast) state.orderMemoryComplete = true;
+                    els.manualStartBtn.classList.remove('hidden');
                 }
             }, ORDER_INDICATOR_MS);
         }
 
         function finishOrderMemory() {
-            shoppingState.orderMemoryComplete = true;
+            state.orderMemoryComplete = true;
             stopShoppingTimer();
             stopOrderTransition();
-            shoppingOrderItem.innerHTML = '';
-            shoppingOrderIndicator.classList.remove('active');
-            shoppingManualStartBtn.classList.add('hidden');
-            shoppingTimer.classList.add('hidden');
-            if (shoppingState.listRevealMode === 'timer') {
+            els.orderItem.innerHTML = '';
+            els.orderIndicator.classList.remove('active');
+            els.manualStartBtn.classList.add('hidden');
+            els.timer.classList.add('hidden');
+            if (state.listRevealMode === 'timer') {
                 showShoppingRecallIntro();
             } else {
-                shoppingManualStartBtn.textContent = '▶ 開始揀選';
-                shoppingManualStartBtn.classList.remove('hidden');
-                shoppingPhaseText.textContent = '已記住，開始揀選';
+                els.manualStartBtn.textContent = '▶ 開始揀選';
+                els.manualStartBtn.classList.remove('hidden');
+                els.phaseText.textContent = '已記住，開始揀選';
             }
         }
 
         function showShoppingOrderPhase(startFlow) {
             stopShoppingTimer();
             stopOrderTransition();
-            shoppingState.phase = 'order';
-            shoppingState.roundLocked = false;
-            shoppingState.completedNames = [];
-            shoppingState.nextOrderIndex = 0;
-            shoppingListView.classList.add('hidden');
-            shoppingRecallView.classList.add('hidden');
-            shoppingOrderView.classList.remove('hidden');
-            shoppingManualStartBtn.classList.add('hidden');
-            shoppingTimer.classList.toggle('hidden', shoppingState.listRevealMode !== 'timer');
-            shoppingPhaseText.textContent = '按順序逐一記住圖片';
-            shoppingProgress.classList.add('hidden');
-            shoppingOrderItem.innerHTML = '';
-            shoppingOrderIndicator.classList.remove('active');
+            state.phase = 'order';
+            state.roundLocked = false;
+            state.completedNames = [];
+            state.nextOrderIndex = 0;
+            els.listView.classList.add('hidden');
+            els.recallView.classList.add('hidden');
+            els.orderView.classList.remove('hidden');
+            els.manualStartBtn.classList.add('hidden');
+            els.timer.classList.toggle('hidden', state.listRevealMode !== 'timer');
+            els.phaseText.textContent = '按順序逐一記住圖片';
+            els.progress.classList.add('hidden');
+            els.orderItem.innerHTML = '';
+            els.orderIndicator.classList.remove('active');
             clearShoppingFeedback();
-            syncTopBarCentering();
+            if (syncTopBarCentering) syncTopBarCentering();
             if (startFlow) {
-                shoppingState.orderMemoryComplete = false;
-                shoppingState.orderIndex = 0;
+                state.orderMemoryComplete = false;
+                state.orderIndex = 0;
                 showOrderItem(0);
             } else {
                 updateShoppingTimer();
             }
         }
 
-        function renderShoppingRecallGrid() {
-            const count = shoppingState.gridItems.length;
-            shoppingRecallGrid.className = `shopping-recall-grid count-${count}`;
-            shoppingRecallGrid.innerHTML = '';
-            shoppingState.gridItems.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'shopping-recall-card';
-                card.dataset.index = index;
-                card.dataset.target = item.isTarget ? 'true' : 'false';
-
-                const magnifyBtn = document.createElement('button');
-                magnifyBtn.className = 'magnify-btn';
-                magnifyBtn.textContent = '🔍';
-                magnifyBtn.title = '放大圖片';
-                magnifyBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    openMagnify(item.image, item.name);
-                });
-
-                const imgWrapper = document.createElement('div');
-                imgWrapper.className = 'food-image';
-                const img = document.createElement('img');
-                img.src = item.image;
-                img.alt = item.name;
-                img.loading = 'lazy';
-                img.onerror = function() {
-                    this.style.display = 'none';
-                    const fallback = document.createElement('span');
-                    fallback.textContent = '🖼️';
-                    fallback.style.fontSize = 'calc(44px * var(--ui-scale))';
-                    this.parentElement.appendChild(fallback);
-                };
-                imgWrapper.appendChild(img);
-
-                const nameSpan = document.createElement('div');
-                nameSpan.className = 'food-name';
-                nameSpan.textContent = item.name;
-
-                const badge = document.createElement('span');
-                badge.className = 'shopping-selected-badge';
-                badge.textContent = '';
-                if (shoppingState.completedNames.includes(getFoodId(item))) {
-                    card.classList.add('selected', 'feedback-correct');
-                    const orderNumber = shoppingState.list.findIndex(listItem => getFoodId(listItem) === getFoodId(item)) + 1;
-                    badge.textContent = shoppingState.orderRequired ? String(orderNumber) : '✓';
-                    badge.classList.add('visible');
-                }
-
-                card.appendChild(magnifyBtn);
-                card.appendChild(badge);
-                card.appendChild(imgWrapper);
-                card.appendChild(nameSpan);
-                card.addEventListener('click', function() { handleShoppingCardClick(index); });
-                shoppingRecallGrid.appendChild(card);
-            });
-            applyNameVisibility();
-        }
-
-        function updateShoppingScore() {
-            shoppingScoreNum.textContent = shoppingState.score;
-        }
-
-        function updateShoppingProgress() {
-            const done = shoppingState.completedNames.length;
-            const total = shoppingState.list.length;
-            shoppingProgress.textContent = done >= total && total > 0
-                ? `✅ 已完成 ${total} / ${total}`
-                : `已揀選 ${done} / ${total}`;
-        }
-
-        function updateShoppingTimer() {
-            const active = shoppingState.phase === 'list' || shoppingState.phase === 'order' || shoppingState.phase === 'recall';
-            if (active && shoppingState.timerActive) {
-                shoppingTimer.textContent = `⏱ ${shoppingState.countdown} 秒`;
-                shoppingTimer.classList.toggle('alert', shoppingState.countdown <= 5);
-            } else {
-                shoppingTimer.textContent = '--';
-                shoppingTimer.classList.remove('alert');
-            }
-        }
-
         function stopShoppingTimer() {
-            shoppingState.timerActive = false;
-            shoppingState.countdown = 0;
-            shoppingCountdownTimer.stop();
+            state.timerActive = false;
+            state.countdown = 0;
+            if (shoppingCountdownTimer) shoppingCountdownTimer.stop();
         }
 
         function pauseShoppingTimer() {
-            shoppingState.timerActive = false;
-            shoppingState.countdown = 0;
-            shoppingCountdownTimer.pause();
+            state.timerActive = false;
+            state.countdown = 0;
+            if (shoppingCountdownTimer) shoppingCountdownTimer.pause();
         }
 
         function syncShoppingSessionUi() {
@@ -516,20 +202,21 @@
 
         function startShoppingCountdown(seconds, onExpire) {
             stopShoppingTimer();
-            shoppingState.countdown = seconds;
-            shoppingState.timerActive = true;
+            state.countdown = seconds;
+            state.timerActive = true;
             updateShoppingTimer();
+            if (!shoppingCountdownTimer) return;
             shoppingCountdownTimer.start({
                 mode: 'countdown',
                 durationMs: seconds * 1000,
                 tickIntervalMs: 1000,
-                tick: function() {
-                    shoppingState.countdown = Math.max(0, shoppingState.countdown - 1);
+                tick: function () {
+                    state.countdown = Math.max(0, state.countdown - 1);
                     updateShoppingTimer();
                 },
-                onComplete: function() {
-                    shoppingState.timerActive = false;
-                    shoppingState.countdown = 0;
+                onComplete: function () {
+                    state.timerActive = false;
+                    state.countdown = 0;
                     updateShoppingTimer();
                     if (typeof onExpire === 'function') {
                         onExpire();
@@ -540,34 +227,44 @@
             });
         }
 
-        function showShoppingListPhase(startTimer = true, renderList = true) {
+        function updateShoppingTimer() {
+            view.setTimer(els.timer, state.phase, state.timerActive, state.countdown);
+        }
+        function showShoppingListPhase(startTimer, renderList) {
+            if (startTimer === undefined) startTimer = true;
+            if (renderList === undefined) renderList = true;
             stopShoppingTimer();
             stopOrderTransition();
-            shoppingState.phase = 'list';
-            shoppingState.roundLocked = false;
-            shoppingState.completedNames = [];
-            shoppingState.nextOrderIndex = 0;
-            shoppingListView.classList.remove('hidden');
-            shoppingRecallView.classList.add('hidden');
-            shoppingOrderView.classList.add('hidden');
-            shoppingOrderItem.innerHTML = '';
-            shoppingOrderIndicator.classList.remove('active');
-            shoppingManualStartBtn.textContent = '▶ 開始揀選';
-            shoppingManualStartBtn.classList.toggle('hidden', shoppingState.listRevealMode !== 'manual');
-            shoppingTimer.classList.toggle('hidden', shoppingState.listRevealMode !== 'timer');
-            shoppingPhaseText.textContent = `📋 購物清單（${shoppingState.list.length} 樣）`;
-            shoppingProgress.classList.add('hidden');
+            state.phase = 'list';
+            state.roundLocked = false;
+            state.completedNames = [];
+            state.nextOrderIndex = 0;
+            els.listView.classList.remove('hidden');
+            els.recallView.classList.add('hidden');
+            els.orderView.classList.add('hidden');
+            els.orderItem.innerHTML = '';
+            els.orderIndicator.classList.remove('active');
+            els.manualStartBtn.textContent = '▶ 開始揀選';
+            els.manualStartBtn.classList.toggle('hidden', state.listRevealMode !== 'manual');
+            els.timer.classList.toggle('hidden', state.listRevealMode !== 'timer');
+            els.phaseText.textContent = `📋 購物清單（${state.list.length} 樣）`;
+            els.progress.classList.add('hidden');
             if (renderList) {
-                renderShoppingList();
+                view.renderShoppingList(doc, els, {
+                    list: state.list,
+                    listDisplayMode: state.listDisplayMode,
+                    showNames: nameVisibility ? nameVisibility.isEnabled : false,
+                    onMagnify: openMagnify
+                });
             } else {
-                shoppingListGrid.innerHTML = '';
+                els.listGrid.innerHTML = '';
             }
-            updateShoppingProgress();
+            view.setProgress(els.progress, state.completedNames.length, state.list.length);
             clearShoppingFeedback();
-            syncTopBarCentering();
-            if (shoppingState.listRevealMode === 'timer') {
+            if (syncTopBarCentering) syncTopBarCentering();
+            if (state.listRevealMode === 'timer') {
                 if (startTimer) {
-                    startShoppingCountdown(shoppingState.listSeconds, function() {
+                    startShoppingCountdown(state.listSeconds, function () {
                         showShoppingRecallIntro();
                     });
                 } else {
@@ -579,271 +276,324 @@
         }
 
         function beginShoppingListPhase() {
-            const renderBeforeIntro = shoppingState.introShownOnce;
-            shoppingState.introShownOnce = true;
+            const renderBeforeIntro = state.introShownOnce;
+            state.introShownOnce = true;
             let title;
             let onDismiss;
-            if (shoppingState.orderRequired) {
+            if (state.orderRequired) {
                 showShoppingOrderPhase(false);
-                onDismiss = function() { showShoppingOrderPhase(true); };
+                onDismiss = function () { showShoppingOrderPhase(true); };
                 title = '按順序逐一記住圖片';
             } else {
                 showShoppingListPhase(false, renderBeforeIntro);
-                onDismiss = function() { showShoppingListPhase(true); };
-                const timed = shoppingState.listRevealMode === 'timer';
+                onDismiss = function () { showShoppingListPhase(true); };
+                const timed = state.listRevealMode === 'timer';
                 title = timed
-                    ? `記住清單，${shoppingState.listSeconds} 秒後開始揀選`
+                    ? `記住清單，${state.listSeconds} 秒後開始揀選`
                     : '記住清單準備好後按<br><span class="start-hint">「開始揀選」</span>';
             }
-            window.CognitiveMessage.show({
-                title: title,
-                subtitle: '',
-                extraLarge: true,
-                pauseTimer: false,
-                titleHtml: true,
-                onDismiss: onDismiss
-            });
+            view.showBeginIntro(message, title, onDismiss);
         }
 
         function showShoppingRecallIntro() {
-            window.CognitiveMessage.show({
-                title: '時間到，開始揀選',
-                subtitle: '',
-                extraLarge: true,
-                pauseTimer: false,
-                onDismiss: startShoppingRecall
-            });
+            view.showRecallIntro(message, startShoppingRecall);
         }
 
         function startShoppingRecall() {
             stopShoppingTimer();
             stopOrderTransition();
-            shoppingState.phase = 'recall';
-            shoppingListView.classList.add('hidden');
-            shoppingOrderView.classList.add('hidden');
-            shoppingRecallView.classList.remove('hidden');
-            shoppingOrderItem.innerHTML = '';
-            shoppingOrderIndicator.classList.remove('active');
-            shoppingManualStartBtn.classList.add('hidden');
-            shoppingTimer.classList.toggle('hidden', !shoppingState.recallTimed);
-            shoppingPhaseText.textContent = '揀選清單中的食物';
-            shoppingProgress.classList.remove('hidden');
-            renderShoppingRecallGrid();
-            updateShoppingProgress();
+            state.phase = 'recall';
+            els.listView.classList.add('hidden');
+            els.orderView.classList.add('hidden');
+            els.recallView.classList.remove('hidden');
+            els.orderItem.innerHTML = '';
+            els.orderIndicator.classList.remove('active');
+            els.manualStartBtn.classList.add('hidden');
+            els.timer.classList.toggle('hidden', !state.recallTimed);
+            els.phaseText.textContent = '揀選清單中的食物';
+            els.progress.classList.remove('hidden');
+            view.renderShoppingRecallGrid(doc, els, {
+                gridItems: state.gridItems,
+                list: state.list,
+                orderRequired: state.orderRequired,
+                completedNames: state.completedNames,
+                getFoodId: getFoodId,
+                onCardClick: handleShoppingCardClick,
+                onMagnify: openMagnify
+            });
+            if (nameVisibility) nameVisibility.apply();
+            view.setProgress(els.progress, state.completedNames.length, state.list.length);
             clearShoppingFeedback();
-            syncTopBarCentering();
-            if (shoppingState.recallTimed) {
-                startShoppingCountdown(shoppingState.recallSeconds, handleShoppingRecallTimeout);
+            if (syncTopBarCentering) syncTopBarCentering();
+            if (state.recallTimed) {
+                startShoppingCountdown(state.recallSeconds, handleShoppingRecallTimeout);
             } else {
                 updateShoppingTimer();
             }
         }
 
         function handleShoppingRecallTimeout() {
-            if (shoppingState.roundLocked) return;
-            shoppingState.roundLocked = true;
-            CognitiveAudio.play('wrong');
+            if (state.roundLocked) return;
+            state.roundLocked = true;
+            audio.play('wrong');
             showShoppingFeedback('⏰ 時間到！再看一次清單', 'warn');
-            setTimeout(function() {
-                window.CognitiveMessage.show({
-                    title: '⏰ 時間到',
-                    subtitle: '先記住購物清單，再試一次！',
-                    buttons: [{
-                        text: '再看清單',
-                        className: 'btn-stay',
-                        action: beginShoppingListPhase
-                    }],
-                    onDismiss: beginShoppingListPhase
-                });
+            setTimeout(function () {
+                view.showTimeout(message, beginShoppingListPhase);
             }, 400);
         }
-
         function handleShoppingCardClick(index) {
-            if (shoppingState.phase !== 'recall' || shoppingState.roundLocked) return;
-            const item = shoppingState.gridItems[index];
-            const card = shoppingRecallGrid.children[index];
+            if (state.phase !== 'recall' || state.roundLocked) return;
+            const item = state.gridItems[index];
+            const card = els.recallGrid.children[index];
             if (!item || !card) return;
-            if (shoppingState.completedNames.includes(getFoodId(item))) return;
+            if (state.completedNames.includes(getFoodId(item))) return;
 
-            const isExpectedNext = shoppingState.orderRequired
-                ? shoppingState.list[shoppingState.nextOrderIndex] &&
-                  getFoodId(item) === getFoodId(shoppingState.list[shoppingState.nextOrderIndex])
+            const isExpectedNext = state.orderRequired
+                ? state.list[state.nextOrderIndex] &&
+                  getFoodId(item) === getFoodId(state.list[state.nextOrderIndex])
                 : item.isTarget;
 
             if (item.isTarget && isExpectedNext) {
-                shoppingState.completedNames.push(getFoodId(item));
-                if (shoppingState.orderRequired) shoppingState.nextOrderIndex++;
-                shoppingState.score++;
-                updateShoppingScore();
-                const orderNumber = shoppingState.list.findIndex(listItem => getFoodId(listItem) === getFoodId(item)) + 1;
+                state.completedNames.push(getFoodId(item));
+                if (state.orderRequired) state.nextOrderIndex++;
+                state.score++;
+                view.setScore(els.scoreNum, state.score);
+                const orderNumber = state.list.findIndex(listItem => getFoodId(listItem) === getFoodId(item)) + 1;
                 const badge = card.querySelector('.shopping-selected-badge');
                 if (badge) {
-                    badge.textContent = shoppingState.orderRequired ? String(orderNumber) : '✓';
+                    badge.textContent = state.orderRequired ? String(orderNumber) : '✓';
                     badge.classList.add('visible');
                 }
                 card.classList.add('selected', 'feedback-correct');
-                CognitiveAudio.play('correct');
+                audio.play('correct');
                 showShoppingFeedback('✅ 正確！', 'correct');
-                updateShoppingProgress();
-                if (shoppingState.completedNames.length >= shoppingState.list.length) {
+                view.setProgress(els.progress, state.completedNames.length, state.list.length);
+                if (state.completedNames.length >= state.list.length) {
                     completeShoppingRound();
                 }
             } else {
-                CognitiveAudio.play('wrong');
+                audio.play('wrong');
                 showShoppingFeedback('❌ 再試一次！', 'wrong');
                 card.classList.add('feedback-wrong');
-                shoppingState.wrongFlashTimer = setTimeout(function() {
+                state.wrongFlashTimer = setTimeout(function () {
                     card.classList.remove('feedback-wrong');
                 }, 600);
             }
         }
 
         function completeShoppingRound() {
-            if (shoppingState.roundLocked) return;
-            shoppingState.roundLocked = true;
+            if (state.roundLocked) return;
+            state.roundLocked = true;
             stopShoppingTimer();
-            updateShoppingProgress();
-            shoppingRecallGrid.querySelectorAll('.shopping-recall-card').forEach(card => {
+            view.setProgress(els.progress, state.completedNames.length, state.list.length);
+            els.recallGrid.querySelectorAll('.shopping-recall-card').forEach(card => {
                 if (!card.classList.contains('selected')) card.classList.add('dimmed');
             });
-            CognitiveAudio.play('correct');
-            window.CognitiveMessage.show({
-                title: '🎉 買餸完成！',
-                subtitle: `你正確揀選了 ${shoppingState.list.length} 樣食物，總得分 ${shoppingState.score}！`,
-                buttons: [{
-                    text: '下一輪 ➜',
-                    className: 'btn-restart',
-                    action: startShoppingRound
-                }],
-                onDismiss: startShoppingRound
-            });
+            audio.play('correct');
+            view.showComplete(message, state.list.length, state.score, startShoppingRound);
         }
 
         function startShoppingRound() {
-            shoppingState.round++;
-            buildShoppingRound();
+            state.round++;
+            applyShoppingRound();
             beginShoppingListPhase();
         }
 
         function startShoppingSession() {
             pauseShopping();
-            shoppingState.listDisplayMode = shoppingListDisplayMode.value;
-            shoppingState.listCount = parseInt(shoppingListCount.value, 10);
-            const memoryTimeValue = shoppingMemoryTime.value;
-            shoppingState.listRevealMode = memoryTimeValue === 'manual' ? 'manual' : 'timer';
-            shoppingState.listSeconds = memoryTimeValue === 'manual' ? 0 : parseInt(memoryTimeValue, 10);
-            shoppingState.choiceCount = Math.max(parseInt(shoppingChoiceCount.value, 10), shoppingState.listCount);
-            shoppingState.orderRequired = shoppingOrderRequired.value === 'true';
-            const recallTimeValue = shoppingRecallTime.value;
-            shoppingState.recallTimed = recallTimeValue !== '0';
-            shoppingState.recallSeconds = recallTimeValue === '0' ? 0 : parseInt(recallTimeValue, 10);
-            shoppingState.choiceCount = Math.max(
-                shoppingState.choiceCount,
-                shoppingState.listCount <= 4 ? 4 : 6
+            state.listDisplayMode = els.listDisplayMode.value;
+            state.listCount = parseInt(els.listCount.value, 10);
+            const memoryTimeValue = els.memoryTime.value;
+            state.listRevealMode = memoryTimeValue === 'manual' ? 'manual' : 'timer';
+            state.listSeconds = memoryTimeValue === 'manual' ? 0 : parseInt(memoryTimeValue, 10);
+            state.choiceCount = Math.max(parseInt(els.choiceCount.value, 10), state.listCount);
+            state.orderRequired = els.orderRequired.value === 'true';
+            const recallTimeValue = els.recallTime.value;
+            state.recallTimed = recallTimeValue !== '0';
+            state.recallSeconds = recallTimeValue === '0' ? 0 : parseInt(recallTimeValue, 10);
+            state.choiceCount = Math.max(
+                state.choiceCount,
+                state.listCount <= 4 ? 4 : 6
             );
-            shoppingState.choiceCount = Math.min(shoppingState.choiceCount, 8);
-            shoppingChoiceCount.value = String(shoppingState.choiceCount);
-            shoppingState.score = 0;
-            shoppingState.round = 0;
-            updateShoppingScore();
-            buildShoppingRound();
+            state.choiceCount = Math.min(state.choiceCount, 8);
+            els.choiceCount.value = String(state.choiceCount);
+            state.score = 0;
+            state.round = 0;
+            view.setScore(els.scoreNum, state.score);
+            applyShoppingRound();
             beginShoppingListPhase();
         }
 
         function clearShoppingFeedback() {
-            if (shoppingState.wrongFlashTimer) {
-                clearTimeout(shoppingState.wrongFlashTimer);
-                shoppingState.wrongFlashTimer = null;
+            if (state.wrongFlashTimer) {
+                clearTimeout(state.wrongFlashTimer);
+                state.wrongFlashTimer = null;
             }
-            window.CognitiveFeedback.clear(shoppingStage);
-            shoppingRecallGrid.querySelectorAll('.shopping-recall-card.feedback-wrong').forEach(el => el.classList.remove('feedback-wrong'));
+            view.clearFeedback(feedback, els.stage);
+            els.recallGrid.querySelectorAll('.shopping-recall-card.feedback-wrong').forEach(el => el.classList.remove('feedback-wrong'));
         }
 
         function showShoppingFeedback(text, kind) {
-            window.CognitiveFeedback.show(shoppingStage, text, kind);
+            view.showFeedback(feedback, els.stage, text, kind);
         }
 
         function pauseShopping() {
             pauseShoppingTimer();
             stopOrderTransition();
             clearShoppingFeedback();
-            if (window.CognitiveMessage) window.CognitiveMessage.close();
-            shoppingState.orderIndex = 0;
-            shoppingState.orderMemoryComplete = false;
-            shoppingOrderItem.innerHTML = '';
-            shoppingOrderIndicator.classList.remove('active');
-            shoppingOrderView.classList.add('hidden');
-            shoppingState.roundLocked = false;
+            if (message) message.close();
+            state.orderIndex = 0;
+            state.orderMemoryComplete = false;
+            els.orderItem.innerHTML = '';
+            els.orderIndicator.classList.remove('active');
+            els.orderView.classList.add('hidden');
+            state.roundLocked = false;
         }
 
-        shoppingManualStartBtn.addEventListener('click', function() {
-            if (shoppingState.phase === 'list') {
-                startShoppingRecall();
-                return;
+        function resetShopping() {
+            stopShoppingTimer();
+            stopOrderTransition();
+            if (state.wrongFlashTimer) {
+                clearTimeout(state.wrongFlashTimer);
+                state.wrongFlashTimer = null;
             }
-            if (shoppingState.phase === 'order') {
-                if (shoppingState.orderMemoryComplete) {
+            state.score = 0;
+            state.round = 0;
+            state.list = [];
+            state.gridItems = [];
+            state.completedNames = [];
+            state.nextOrderIndex = 0;
+            state.phase = 'list';
+            state.roundLocked = false;
+            state.introShownOnce = false;
+            view.setScore(els.scoreNum, state.score);
+            view.setProgress(els.progress, state.completedNames.length, state.list.length);
+            clearShoppingFeedback();
+        }
+
+        function destroyShopping() {
+            stopShoppingTimer();
+            stopOrderTransition();
+            if (state.wrongFlashTimer) clearTimeout(state.wrongFlashTimer);
+            try { controller.abort(); } catch (e) { /* already aborted */ }
+        }
+        view.bindShoppingControls(els, listenOpts, {
+            onOrderRequiredChange: function () { view.updateMemoryOptions(els, STANDARD_MEMORY_OPTIONS, ORDER_MEMORY_OPTIONS, lightbulb, true); },
+            onMemoryTimeClick: function () { lightbulb.hide(); },
+            onMemoryTimeChange: function () { lightbulb.hide(); },
+            onSaveSettings: function () {
+                const prefsObj = {
+                    listDisplayMode: els.listDisplayMode.value,
+                    listCount: parseInt(els.listCount.value, 10),
+                    memoryTime: els.memoryTime.value,
+                    choiceCount: parseInt(els.choiceCount.value, 10),
+                    orderRequired: els.orderRequired.value === 'true',
+                    recallTime: els.recallTime.value
+                };
+                if (prefs) {
+                    prefs.save('cognitiveShoppingPrefs', prefsObj);
+                }
+                view.showSaved(message);
+            },
+            onManualStart: function () {
+                if (state.phase === 'list') {
                     startShoppingRecall();
                     return;
                 }
-                showOrderItem(shoppingState.orderIndex + 1);
-            }
-        });
-
-
-        shoppingNameToggleBtn.addEventListener('click', function() {
-            showNames = !showNames;
-            applyNameVisibility();
-            this.classList.toggle('name-hidden', !showNames);
-        });
-
-        shoppingStartBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) {
-                if (window.CognitiveRouter.navigate('shoppingGame')) {
-                    syncTopBarCentering();
+                if (state.phase === 'order') {
+                    if (state.orderMemoryComplete) {
+                        startShoppingRecall();
+                        return;
+                    }
+                    showOrderItem(state.orderIndex + 1);
+                }
+            },
+            onNameToggle: function (btn) {
+                if (nameVisibility) {
+                    nameVisibility.toggle();
+                    btn.classList.toggle('name-hidden', !nameVisibility.isEnabled);
+                }
+            },
+            onStart: function () {
+                if (router) {
+                    if (router.navigate('shoppingGame')) {
+                        if (syncTopBarCentering) syncTopBarCentering();
+                        startShoppingSession();
+                    }
+                } else {
+                    els.settings.classList.add('hidden');
+                    els.game.style.display = 'flex';
+                    if (syncTopBarCentering) syncTopBarCentering();
                     startShoppingSession();
                 }
-            } else {
-                shoppingSettingsScreen.classList.add('hidden');
-                shoppingGameScreen.style.display = 'flex';
-                syncTopBarCentering();
-                startShoppingSession();
+            },
+            onBack: function () {
+                if (router) {
+                    router.goBack();
+                } else {
+                    els.game.style.display = 'none';
+                    els.settings.classList.remove('hidden');
+                    pauseShopping();
+                }
+            },
+            onSettingsBack: function () {
+                if (router) {
+                    router.goBack();
+                } else {
+                    els.settings.classList.add('hidden');
+                    pauseShopping();
+                    if (typeof global.goToMainMenu === 'function') global.goToMainMenu();
+                }
             }
         });
 
-        shoppingBackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) {
-                window.CognitiveRouter.goBack();
-            } else {
-                shoppingGameScreen.style.display = 'none';
-                shoppingSettingsScreen.classList.remove('hidden');
-                pauseShopping();
-            }
-        });
+        view.updateMemoryOptions(els, STANDARD_MEMORY_OPTIONS, ORDER_MEMORY_OPTIONS, lightbulb, !!(els.orderRequired && els.orderRequired.value === 'true'));
+        els.scoreNum.textContent = '0';
+        els.progress.textContent = '已揀選 0 / 3';
+        els.timer.textContent = '--';
 
-        shoppingSettingsBackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) {
-                window.CognitiveRouter.goBack();
-            } else {
-                shoppingSettingsScreen.classList.add('hidden');
-                pauseShopping();
-                goToMainMenu();
-            }
-        });
-
-        shoppingScoreNum.textContent = '0';
-        shoppingProgress.textContent = '已揀選 0 / 3';
-        shoppingTimer.textContent = '--';
-
-        if (window.CognitiveRouter) {
-            window.CognitiveRouter.defineScreen('shoppingSettings', {
+        if (router) {
+            router.defineScreen('shoppingSettings', {
                 exit: pauseShopping,
                 back: 'mainMenu'
             });
-            window.CognitiveRouter.defineScreen('shoppingGame', {
+            router.defineScreen('shoppingGame', {
                 exit: pauseShopping,
                 back: 'shoppingSettings'
             });
         }
 
-        // =============================================================
+        return {
+            start: startShoppingSession,
+            pause: pauseShopping,
+            reset: resetShopping,
+            destroy: destroyShopping
+        };
+    }
+
+    var api = { mount: mount };
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = api;
+    }
+
+    if (typeof window !== 'undefined') {
+        window.CognitiveShopping = api;
+        // Transitional self-mount preserving the original load-time behaviour.
+        // Later strangler steps move this call into the router/orchestrator.
+        api.mount(document, {
+            foodData: window.CognitiveFoodData,
+            logic: window.CognitiveShoppingLogic,
+            view: window.CognitiveShoppingView,
+            prefs: window.CognitivePrefs,
+            activityTimer: window.CognitiveActivityTimer,
+            message: window.CognitiveMessage,
+            feedback: window.CognitiveFeedback,
+            router: window.CognitiveRouter,
+            audio: window.CognitiveAudio,
+            openMagnify: window.openMagnify,
+            syncTopBarCentering: window.syncTopBarCentering,
+            nameVisibility: window.CognitiveNameVisibility ? window.CognitiveNameVisibility.shared : null
+        });
+    }
+})(typeof window !== 'undefined' ? window : globalThis);

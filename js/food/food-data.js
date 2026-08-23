@@ -1,4 +1,7 @@
-        // 第一部分：共用資料與工具
+(function (global) {
+    'use strict';
+
+// 第一部分：共用資料與工具
         // =============================================================
 
         const FOOD_DATA = [
@@ -189,3 +192,31 @@
             '甜品': '哪一個是 <span class="category-highlight">甜品</span> ？',
             '海鮮': '哪一個是 <span class="category-highlight">海鮮</span> ？',
         };
+
+function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math
+                .random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+        function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    var CognitiveFoodData = {
+        FOOD_DATA: FOOD_DATA,
+        getFoodId: getFoodId,
+        CATEGORY_NAMES: CATEGORY_NAMES,
+        CATEGORY_ICONS: CATEGORY_ICONS,
+        QUESTION_TEMPLATES: QUESTION_TEMPLATES,
+        shuffle: shuffle,
+        pickRandom: pickRandom
+    };
+
+    // The food data is exposed only as the CognitiveFoodData bundle. The legacy
+    // bare-global aliases (FOOD_DATA / getFoodId / CATEGORY_NAMES / ...) were dropped
+    // once every consumer (game mounts + settings.js) read from CognitiveFoodData.
+    if (typeof window !== 'undefined') {
+        window.CognitiveFoodData = CognitiveFoodData;
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = CognitiveFoodData;
+    }
+})(typeof window !== 'undefined' ? window : globalThis);

@@ -1,7 +1,48 @@
-        // 第三部分：N-back 記憶遊戲
-        // =============================================================
+(function (global) {
+    'use strict';
 
-        const nbackState = {
+    // =============================================================
+    // 第三部分：N-back 記憶遊戲
+    // =============================================================
+    //
+    // Pure helpers at module scope; lifecycle in mount(root, deps). All direct
+    // DOM interaction is delegated to the injected nback-view module.
+
+    function generateNbackSequence(length, n, foodData, sequence) {
+        return sequence.generateTrials({
+            choices: foodData,
+            n: n,
+            length: length,
+            matchProbability: sequence.matchProbability,
+            cloneValue: item => ({ ...item }),
+            keyFor: item => item.name
+        });
+    }
+
+    function mount(root, deps) {
+        deps = deps || {};
+        var doc = (root && root.ownerDocument) || root || (typeof document !== 'undefined' ? document : null);
+        if (!doc) return null;
+
+        var foodData = deps.foodData || (typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null);
+        if (!foodData) return null;
+        var FOOD_DATA = foodData.FOOD_DATA;
+
+        var sequence = deps.sequence || (typeof global.CognitiveSequence !== 'undefined' ? global.CognitiveSequence : null);
+        var activityFactory = deps.activity || (typeof global.CognitiveActivity !== 'undefined' ? global.CognitiveActivity : null);
+        var message = deps.message || (typeof global.CognitiveMessage !== 'undefined' ? global.CognitiveMessage : null);
+        var feedback = deps.feedback || (typeof global.CognitiveFeedback !== 'undefined' ? global.CognitiveFeedback : null);
+        var router = deps.router || (typeof global.CognitiveRouter !== 'undefined' ? global.CognitiveRouter : null);
+        var keyboard = deps.keyboard || (typeof global.CognitiveKeyboard !== 'undefined' ? global.CognitiveKeyboard : null);
+        var audio = deps.audio || (typeof global.CognitiveAudio !== 'undefined' ? global.CognitiveAudio : null);
+        var openMagnify = deps.openMagnify || (typeof global.openMagnify === 'function' ? global.openMagnify : null);
+        var view = deps.view || (typeof global.CognitiveNbackView !== 'undefined' ? global.CognitiveNbackView : null);
+
+        if (!sequence || !activityFactory || !view) return null;
+
+        var els = view.createNbackEls(doc);
+
+        var state = {
             n: 1,
             speed: 5,
             isPlaying: false,
@@ -13,324 +54,247 @@
             falseAlarms: 0,
             interval: 0,
             currentItem: null,
-            matchPending: false,
-            transitioning: false,
-            animationToken: 0,
-            transitionTimer: null,
+            matchPending: false
         };
 
-        const nbackImage = document.getElementById('nbackImage');
-        const nbackGridWrapper = document.getElementById('nbackGridWrapper');
-        const nbackOverlay = document.getElementById('nbackOverlay');
-        const nbackStepLabel = document.getElementById('nbackStepLabel');
-        const nbackScoreNum = document.getElementById('nbackScoreNum');
-        const nbackPlayBtn = document.getElementById('nbackPlayBtn');
-        const nbackSpeedDisplay = document.getElementById('nbackSpeedDisplay');
-        const nbackSpeedDown = document.getElementById('nbackSpeedDown');
-        const nbackSpeedUp = document.getElementById('nbackSpeedUp');
-        const nbackMatchBtn = document.getElementById('nbackMatchBtn');
-        const nbackNotMatchBtn = document.getElementById('nbackNotMatchBtn');
-        const nbackImageContainer = document.getElementById('nbackImageContainer');
-        const nbackNSelect = document.getElementById('nbackNSelect');
-        const nbackBackBtn = document.getElementById('nbackBackBtn');
-        const nbackMagnifyBtn = document.getElementById('nbackMagnifyBtn');
-        const NBACK_TRANSITION_MS = 240;
-        const nbackActivity = window.CognitiveActivity.create({
+        var controller = new AbortController();
+        var listenOpts = { signal: controller.signal };
+
+        var nbackActivity = activityFactory.create({
             minInterval: 500,
             maxInterval: 3000,
             speedSteps: 10,
-            defaultSpeed: nbackState.speed,
-            tick: function () { if (nbackState.isPlaying) nextNbackImage(true); },
-            onPause: syncNbackSessionUi,
-            onResume: syncNbackSessionUi
+            defaultSpeed: state.speed,
+            tick: function () { if (state.isPlaying) nextNbackImage(true); },
+            onPause: function () { nbackView.syncSessionButton(state.isPlaying, nbackActivity.isRunning()); },
+            onResume: function () { nbackView.syncSessionButton(state.isPlaying, nbackActivity.isRunning()); }
         });
 
-        function syncNbackPlayButton() {
-            nbackPlayBtn.classList.toggle('playing', nbackState.isPlaying);
-        }
+        var nbackView = view.createNbackView(doc, els, nbackActivity, 240);
 
-        function syncNbackSessionUi() {
-            var active = nbackState.isPlaying && nbackActivity.isRunning();
-            nbackPlayBtn.classList.toggle('playing', active);
-        }
-
-        function updateNbackInterval() {
-            // Speed-to-interval mapping is handled by CognitiveActivity.start/reset.
-        }
-
-        // Brain Workshop-style random match generation: each trial has a set
-        // probability of matching the stimulus N trials earlier. The planner
-        // keeps identity and match status in the trial itself.
-        function generateNbackSequence(length = 50) {
-            return window.CognitiveSequence.generateTrials({
-                choices: FOOD_DATA,
-                n: nbackState.n,
-                length,
-                matchProbability: window.CognitiveSequence.matchProbability,
-                cloneValue: item => ({ ...item }),
-                keyFor: item => item.name
-            });
-        }
-
-        function clearNbackTransition() {
-            nbackState.animationToken++;
-            if (nbackState.transitionTimer) {
-                clearTimeout(nbackState.transitionTimer);
-                nbackState.transitionTimer = null;
-            }
-            if (nbackImageContainer) {
-                nbackImageContainer.classList.remove('is-exiting', 'is-entering');
-            }
-            nbackState.transitioning = false;
-        }
-
-        function commitNbackItem(trial, index) {
-            const item = trial && trial.value ? trial.value : trial;
-            nbackImage.style.display = 'block';
-            nbackMagnifyBtn.style.display = 'flex';
-            nbackImage.style.backgroundColor = 'transparent';
-            nbackImage.src = item.image;
-            nbackImage.alt = '';
-            nbackImage.setAttribute('aria-label', item.name);
-            nbackOverlay.style.opacity = 0;
-            nbackOverlay.textContent = '';
-            nbackState.currentItem = item;
-            nbackState.matchPending = false;
-            nbackStepLabel.textContent = `#${index + 1}`;
+        function buildSequence(length) {
+            return generateNbackSequence(length, state.n, FOOD_DATA, sequence);
         }
 
         function startNback() {
-            if (nbackState.isPlaying) return;
-            clearNbackTransition();
-            nbackState.sequence = generateNbackSequence(50);
-            nbackState.currentIndex = 0;
-            nbackState.score = 0;
-            nbackState.totalTrials = 0;
-            nbackState.correctHits = 0;
-            nbackState.falseAlarms = 0;
-            updateNbackScore();
-            nbackState.isPlaying = true;
-            syncNbackPlayButton();
-            commitNbackItem(nbackState.sequence[0], 0);
-            nbackActivity.start(nbackState.speed);
+            if (state.isPlaying) return;
+            nbackView.clearTransition();
+            state.sequence = buildSequence(50);
+            state.currentIndex = 0;
+            state.score = 0;
+            state.totalTrials = 0;
+            state.correctHits = 0;
+            state.falseAlarms = 0;
+            nbackView.setScore(state.score);
+            state.isPlaying = true;
+            nbackView.syncPlayButton(state.isPlaying);
+            state.currentItem = nbackView.commit(state.sequence[0], 0);
+            state.matchPending = false;
+            nbackActivity.start(state.speed);
         }
 
         function pauseNback() {
-            clearNbackTransition();
+            nbackView.clearTransition();
             nbackActivity.pause();
-            nbackState.isPlaying = false;
-            syncNbackPlayButton();
-            window.CognitiveFeedback.clear(nbackGridWrapper);
+            state.isPlaying = false;
+            nbackView.syncPlayButton(state.isPlaying);
+            feedback.clear(els.gridWrapper);
         }
-
-        function nbackShowTrial(index) {
-            if (nbackState.transitioning) return;
-            nbackActivity.hold();
-            nbackState.transitioning = true;
-            nbackState.matchPending = true;
-            const token = ++nbackState.animationToken;
-            nbackImageContainer.classList.remove('is-entering');
-            nbackImageContainer.classList.add('is-exiting');
-            nbackState.transitionTimer = setTimeout(() => {
-                if (token !== nbackState.animationToken) return;
-                nbackState.currentIndex = index;
-                const trial = nbackState.sequence[nbackState.currentIndex];
-                nbackImageContainer.classList.remove('is-exiting');
-                nbackImageContainer.classList.add('is-entering');
-                commitNbackItem(trial, nbackState.currentIndex);
-                nbackState.transitionTimer = setTimeout(() => {
-                    if (token !== nbackState.animationToken) return;
-                    nbackImageContainer.classList.remove('is-entering');
-                    nbackState.transitioning = false;
-                }, NBACK_TRANSITION_MS);
-                nbackActivity.reset();
-            }, NBACK_TRANSITION_MS);
+        function resetNback() {
+            if (nbackActivity) nbackActivity.stop();
+            nbackView.clearTransition();
+            state.isPlaying = false;
+            state.sequence = [];
+            state.currentIndex = -1;
+            state.score = 0;
+            state.totalTrials = 0;
+            state.correctHits = 0;
+            state.falseAlarms = 0;
+            state.currentItem = null;
+            state.matchPending = false;
+            nbackView.setScore(state.score);
+            nbackView.syncPlayButton(state.isPlaying);
+            feedback.clear(els.gridWrapper);
         }
 
         function nextNbackImage(fromTimer = false) {
-            let next = nbackState.currentIndex + 1;
-            if (next >= nbackState.sequence.length) {
-                nbackState.sequence = generateNbackSequence(50);
+            let next = state.currentIndex + 1;
+            if (next >= state.sequence.length) {
+                state.sequence = buildSequence(50);
                 next = 0;
             }
-            nbackShowTrial(next);
-        }
-
-
-        let nbackImageTimer = null;
-
-        // 回饋燈光落在遊戲圖片容器上（而非按鈕）
-        function flashNbackImage(correct) {
-            clearTimeout(nbackImageTimer);
-            nbackImageContainer.classList.remove('feedback-correct', 'feedback-wrong');
-            void nbackImageContainer.offsetWidth;
-            nbackImageContainer.classList.add(correct ? 'feedback-correct' : 'feedback-wrong');
-            nbackImageTimer = setTimeout(function () {
-                nbackImageContainer.classList.remove('feedback-correct', 'feedback-wrong');
-            }, 600);
+            nbackView.showTrial(state.sequence, next, {
+                onTrialStart: function () {
+                    state.matchPending = true;
+                },
+                onTrialCommitted: function (item, committedIndex) {
+                    state.currentIndex = committedIndex;
+                    state.currentItem = item;
+                    state.matchPending = false;
+                }
+            });
         }
 
         function handleNbackMatch(isMatch) {
-            if (nbackState.currentIndex < 0 || nbackState.matchPending || nbackState.transitioning) return;
-            if (nbackState.currentIndex < nbackState.n) {
-                showNbackFeedback('還不夠 N 步', 'warn');
+            if (state.currentIndex < 0 || state.matchPending || nbackView.isTransitioning()) return;
+            if (state.currentIndex < state.n) {
+                nbackView.showFeedback(feedback, '還不夠 N 步', 'warn');
                 return;
             }
             const actualMatch = Boolean(
-                nbackState.sequence[nbackState.currentIndex] &&
-                nbackState.sequence[nbackState.currentIndex].isMatch
+                state.sequence[state.currentIndex] &&
+                state.sequence[state.currentIndex].isMatch
             );
             const correct = (isMatch === actualMatch);
-            nbackState.matchPending = true;
+            state.matchPending = true;
             nbackActivity.hold();
 
             if (correct) {
-                nbackState.score++;
-                if (isMatch) nbackState.correctHits++;
-                else nbackState.falseAlarms++;
-                showNbackFeedback('✅ 正確！', 'correct');
-                CognitiveAudio.play('correct');
+                state.score++;
+                if (isMatch) state.correctHits++;
+                else state.falseAlarms++;
+                nbackView.showFeedback(feedback, '✅ 正確！', 'correct');
+                audio.play('correct');
             } else {
-                showNbackFeedback('❌ 再試一次！', 'wrong');
-                CognitiveAudio.play('wrong');
+                nbackView.showFeedback(feedback, '❌ 再試一次！', 'wrong');
+                audio.play('wrong');
             }
-            flashNbackImage(correct);
-            nbackState.totalTrials++;
-            updateNbackScore();
+            nbackView.flash(correct);
+            state.totalTrials++;
+            nbackView.setScore(state.score);
 
             if (correct) {
                 setTimeout(() => {
-                    if (nbackState.isPlaying) nextNbackImage(true);
+                    if (state.isPlaying) nextNbackImage(true);
                     else {
-                        nbackState.matchPending = false;
+                        state.matchPending = false;
                     }
                 }, 600);
             } else {
                 setTimeout(() => {
-                    nbackState.matchPending = false;
+                    state.matchPending = false;
                 }, 600);
             }
         }
 
-        function showNbackFeedback(text, kind) {
-            window.CognitiveFeedback.show(nbackGridWrapper, text, kind);
-        }
-
-        function updateNbackScore() { nbackScoreNum.textContent = nbackState.score; }
-
         function changeNbackSpeed(delta) {
-            let newSpeed = nbackState.speed + delta;
+            let newSpeed = state.speed + delta;
             if (newSpeed < 1) newSpeed = 1;
             if (newSpeed > 10) newSpeed = 10;
-            nbackState.speed = newSpeed;
-            nbackSpeedDisplay.textContent = newSpeed;
+            state.speed = newSpeed;
+            els.speedDisplay.textContent = newSpeed;
             nbackActivity.setSpeed(newSpeed);
-            if (nbackState.isPlaying) {
+            if (state.isPlaying) {
                 nbackActivity.reset();
             }
         }
 
-        function showNbackInstruction() {
-            window.CognitiveMessage.show({
-                title: `看看圖片與上 ${nbackState.n} 張是否相同`,
-                subtitle: '',
-                extraLarge: true,
-                pauseTimer: false
-            });
-        }
-
         function changeNbackN(newN) {
-            const wasPlaying = nbackState.isPlaying;
-            nbackState.n = newN;
+            const wasPlaying = state.isPlaying;
+            state.n = newN;
             if (wasPlaying) pauseNback();
-            showNbackInstruction();
+            nbackView.showInstruction(message, state.n);
         }
 
-        nbackPlayBtn.addEventListener('click', function() {
-            if (nbackState.isPlaying) { pauseNback(); } else { startNback(); }
-        });
-
-        nbackImageContainer.addEventListener('click', function() {
-            if (!nbackState.matchPending && !nbackState.transitioning) {
-                nextNbackImage();
-            }
-        });
-
-        nbackMagnifyBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (nbackState.currentItem) {
-                openMagnify(nbackState.currentItem.image, nbackState.currentItem.name);
-            }
-        });
-
-        nbackMatchBtn.addEventListener('click', function() { handleNbackMatch(true); });
-        nbackNotMatchBtn.addEventListener('click', function() { handleNbackMatch(false); });
-
-        nbackSpeedDown.addEventListener('click', function() { changeNbackSpeed(-1); });
-        nbackSpeedUp.addEventListener('click', function() { changeNbackSpeed(1); });
-
-        nbackNSelect.addEventListener('change', function() {
-            const val = parseInt(this.value, 10);
-            changeNbackN(val);
-        });
-
-        nbackBackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) {
-                window.CognitiveRouter.goBack();
-            } else {
-                document.getElementById('nbackGame').style.display = 'none';
-                pauseNback();
-                goToMainMenu();
-            }
-        });
-
-        if (window.CognitiveKeyboard) {
-            window.CognitiveKeyboard.registerScreen('nbackGame', {
+        function destroyNback() {
+            if (nbackActivity) nbackActivity.stop();
+            nbackView.clearTransition();
+            try { controller.abort(); } catch (e) { /* already aborted */ }
+            state.isPlaying = false;
+        }
+        nbackView.bindControls(keyboard, listenOpts, {
+            onPlayPause: function () { if (state.isPlaying) { pauseNback(); } else { startNback(); } },
+            onImageClick: function () { if (!state.matchPending && !nbackView.isTransitioning()) nextNbackImage(); },
+            onMagnify: function () {
+                if (state.currentItem && openMagnify) {
+                    openMagnify(state.currentItem.image, state.currentItem.name);
+                }
+            },
+            onMatch: function () { handleNbackMatch(true); },
+            onNotMatch: function () { handleNbackMatch(false); },
+            onSpeedDown: function () { changeNbackSpeed(-1); },
+            onSpeedUp: function () { changeNbackSpeed(1); },
+            onNChange: function (value) { changeNbackN(parseInt(value, 10)); },
+            onBack: function () {
+                if (router) {
+                    router.goBack();
+                } else {
+                    els.game.style.display = 'none';
+                    pauseNback();
+                    if (typeof global.goToMainMenu === 'function') global.goToMainMenu();
+                }
+            },
+            keyboard: {
                 j: function () { handleNbackMatch(true); },
                 k: function () { handleNbackMatch(false); },
-                space: function () { if (!nbackState.matchPending && !nbackState.transitioning) nextNbackImage(); },
+                space: function () { if (!state.matchPending && !nbackView.isTransitioning()) nextNbackImage(); },
                 '-': function () { changeNbackSpeed(-1); },
                 '=': function () { changeNbackSpeed(1); },
-                p: function () { if (nbackState.isPlaying) { pauseNback(); } else { startNback(); } }
-            });
-        }
+                p: function () { if (state.isPlaying) { pauseNback(); } else { startNback(); } }
+            }
+        });
 
-        nbackSpeedDisplay.textContent = nbackState.speed;
-        nbackNSelect.value = nbackState.n;
+        els.speedDisplay.textContent = state.speed;
+        els.nSelect.value = state.n;
 
         function prepareNbackGame() {
             pauseNback();
-            clearNbackTransition();
-            if (nbackState.sequence.length === 0) {
-                nbackState.sequence = generateNbackSequence(50);
-                nbackState.currentIndex = 0;
-                nbackState.currentItem = nbackState.sequence[0].value;
-                nbackState.matchPending = false;
-                nbackState.score = 0;
-                nbackState.totalTrials = 0;
-                nbackState.correctHits = 0;
-                nbackState.falseAlarms = 0;
-                updateNbackScore();
-                nbackImage.src = nbackState.currentItem.image;
-                nbackImage.alt = '';
-                nbackImage.setAttribute('aria-label', nbackState.currentItem.name);
-                nbackImage.style.display = 'block';
-                nbackOverlay.textContent = '';
-                nbackOverlay.style.opacity = 0;
-                nbackStepLabel.textContent = '#1';
-                nbackMagnifyBtn.style.display = 'flex';
+            nbackView.clearTransition();
+            if (state.sequence.length === 0) {
+                state.sequence = buildSequence(50);
+                state.currentIndex = 0;
+                state.currentItem = nbackView.commit(state.sequence[0], 0);
+                state.matchPending = false;
+                state.score = 0;
+                state.totalTrials = 0;
+                state.correctHits = 0;
+                state.falseAlarms = 0;
+                nbackView.setScore(state.score);
             }
-            updateNbackInterval();
-            nbackSpeedDisplay.textContent = nbackState.speed;
-            showNbackInstruction();
+            els.speedDisplay.textContent = state.speed;
+            nbackView.showInstruction(message, state.n);
         }
 
-        if (window.CognitiveRouter) {
-            window.CognitiveRouter.defineScreen('nbackGame', {
+        if (router) {
+            router.defineScreen('nbackGame', {
                 enter: prepareNbackGame,
                 exit: pauseNback,
                 back: 'nbackModeSelect'
             });
         }
 
-        // =============================================================
+        return {
+            start: startNback,
+            pause: pauseNback,
+            reset: resetNback,
+            destroy: destroyNback
+        };
+    }
+
+    var api = {
+        mount: mount,
+        generateNbackSequence: generateNbackSequence
+    };
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = api;
+    }
+
+    if (typeof window !== 'undefined') {
+        window.CognitiveNback = api;
+        // Transitional self-mount preserving the original load-time behaviour.
+        // Later strangler steps move this call into the router/orchestrator.
+        api.mount(document, {
+            foodData: window.CognitiveFoodData,
+            sequence: window.CognitiveSequence,
+            activity: window.CognitiveActivity,
+            message: window.CognitiveMessage,
+            feedback: window.CognitiveFeedback,
+            router: window.CognitiveRouter,
+            keyboard: window.CognitiveKeyboard,
+            audio: window.CognitiveAudio,
+            openMagnify: window.openMagnify,
+            view: window.CognitiveNbackView
+        });
+    }
+})(typeof window !== 'undefined' ? window : globalThis);

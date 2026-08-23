@@ -1,7 +1,42 @@
-        // 第四部分：Go/No Go 遊戲
-        // =============================================================
+(function (global) {
+    'use strict';
 
-        const gngState = {
+    // =============================================================
+    // 第四部分：Go/No Go 遊戲 — mount + lifecycle
+    // =============================================================
+    //
+    // Pure sequence logic (gng-logic.js) and all direct DOM interaction
+    // (gng-view.js) are injected via deps. This module keeps the game
+    // lifecycle: state, timing, scoring, task switching, navigation.
+
+    function mount(root, deps) {
+        deps = deps || {};
+        var doc = (root && root.ownerDocument) || root || (typeof document !== 'undefined' ? document : null);
+        if (!doc) return null;
+
+        var foodData = deps.foodData || (typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null);
+        if (!foodData) return null;
+        var logic = deps.logic || (typeof global.CognitiveGngLogic !== 'undefined' ? global.CognitiveGngLogic : null);
+        var view = deps.view || (typeof global.CognitiveGngView !== 'undefined' ? global.CognitiveGngView : null);
+        var prefs = deps.prefs || (typeof global.CognitivePrefs !== 'undefined' ? global.CognitivePrefs : null);
+        var activityFactory = deps.activity || (typeof global.CognitiveActivity !== 'undefined' ? global.CognitiveActivity : null);
+        var message = deps.message || (typeof global.CognitiveMessage !== 'undefined' ? global.CognitiveMessage : null);
+        var feedback = deps.feedback || (typeof global.CognitiveFeedback !== 'undefined' ? global.CognitiveFeedback : null);
+        var router = deps.router || (typeof global.CognitiveRouter !== 'undefined' ? global.CognitiveRouter : null);
+        var keyboard = deps.keyboard || (typeof global.CognitiveKeyboard !== 'undefined' ? global.CognitiveKeyboard : null);
+        var audio = deps.audio || (typeof global.CognitiveAudio !== 'undefined' ? global.CognitiveAudio : null);
+        var openMagnify = deps.openMagnify || (typeof global.openMagnify === 'function' ? global.openMagnify : null);
+        var syncTopBarCentering = deps.syncTopBarCentering || (typeof global.syncTopBarCentering === 'function' ? global.syncTopBarCentering : null);
+
+        if (!logic || !view || !activityFactory) return null;
+        var FOOD_DATA = foodData.FOOD_DATA;
+        var CATEGORY_NAMES = foodData.CATEGORY_NAMES;
+        var pickRandom = foodData.pickRandom;
+        var getFoodId = foodData.getFoodId;
+
+        var els = view.createGngEls(doc);
+
+        var state = {
             goCategory: '水果',
             noGoCategory: '全部',
             autoSwitch: false,
@@ -23,296 +58,193 @@
             messagePaused: false,
         };
 
-        const gngGridContainer = document.getElementById('gngGridContainer');
-        const gngGridWrapper = document.getElementById('gngGridWrapper');
-        const gngScoreNum = document.getElementById('gngScoreNum');
-        const gngGoLabel = document.getElementById('gngGoLabel');
-        const gngNoGoLabel = document.getElementById('gngNoGoLabel');
-        const gngRuleText = document.getElementById('gngRuleText');
-        const gngPlayBtn = document.getElementById('gngPlayBtn');
-        const gngSpeedDisplay = document.getElementById('gngSpeedDisplay');
-        const gngSpeedDown = document.getElementById('gngSpeedDown');
-        const gngSpeedUp = document.getElementById('gngSpeedUp');
-        const gngGoBtn = document.getElementById('gngGoBtn');
-        const gngNoGoBtn = document.getElementById('gngNoGoBtn');
-        const gngBackBtn = document.getElementById('gngBackBtn');
-        const gngSettingsBackBtn = document.getElementById('gngSettingsBackBtn');
-        const gngGoCategory = document.getElementById('gngGoCategory');
-        const gngNoGoCategory = document.getElementById('gngNoGoCategory');
-        const gngAutoToggle = document.getElementById('gngAutoToggle');
-        const gngSwitchType = document.getElementById('gngSwitchType');
-        const gngSwitchFreq = document.getElementById('gngSwitchFreq');
-        const gngStartBtn = document.getElementById('gngStartBtn');
-        const gngSaveSettingsBtn = document.getElementById('gngSaveSettingsBtn');
+        var gngPreferences = prefs ? prefs.load('cognitiveGngPrefs') : null;
+        var controller = new AbortController();
+        var listenOpts = { signal: controller.signal };
 
-        const gngPreferences = window.CognitivePrefs
-            ? CognitivePrefs.load('cognitiveGngPrefs')
-            : null;
-        const gngActivity = window.CognitiveActivity.create({
+        var gngActivity = activityFactory ? activityFactory.create({
             minInterval: 1000,
             maxInterval: 6000,
             speedSteps: 10,
-            defaultSpeed: gngState.speed,
-            tick: function () { if (gngState.isPlaying && !gngState.timerPaused) nextGngImage(); },
+            defaultSpeed: state.speed,
+            tick: function () { if (state.isPlaying && !state.timerPaused) nextGngImage(); },
             onPause: syncGngSessionUi,
             onResume: syncGngSessionUi
-        });
+        }) : null;
 
         function syncGngPlayButton() {
-            gngPlayBtn.classList.toggle('playing', gngState.isPlaying);
+            view.syncPlayButton(els.playBtn, state.isPlaying);
         }
 
         function syncGngSessionUi() {
-            gngState.messagePaused = gngActivity.isPaused() && !gngState.timerPaused;
-            gngPlayBtn.classList.toggle('playing', gngState.isPlaying && (gngState.timerPaused || gngActivity.isRunning()));
+            state.messagePaused = gngActivity.isPaused() && !state.timerPaused;
+            view.syncSessionButton(els.playBtn, state.isPlaying && (state.timerPaused || gngActivity.isRunning()), true);
         }
 
         function resetGngTimer() {
-            if (!gngState.isPlaying || gngState.timerPaused) return;
-            if (gngState.messagePaused && gngActivity.isPaused()) {
+            if (!state.isPlaying || state.timerPaused) return;
+            if (state.messagePaused && gngActivity.isPaused()) {
                 gngActivity.restart();
                 return;
             }
             gngActivity.reset();
         }
 
-        function generateGngSequence(length = 50) {
-            const { goCategories, noGoCategories } = getGngSignalCategories();
-            const excludeIds = getAmbiguousGngFoodIds(goCategories, noGoCategories);
-            const seq = [];
-            for (let i = 0; i < length; i++) {
-                const isGoTrial = noGoCategories.length === 0 || Math.random() < 0.5;
-                const categoryPool = isGoTrial ? goCategories : noGoCategories;
-                seq.push(pickGngTrialItems(categoryPool, gngState.imageCount, excludeIds));
-            }
-            return seq;
-        }
-
-        function getGngSignalCategories() {
-            const goCat = gngState.goCategory;
-            const noGoCat = gngState.noGoCategory;
-            if (goCat === '全部' && noGoCat === '全部') {
-                return { goCategories: CATEGORY_NAMES, noGoCategories: [] };
-            }
-            if (goCat === '全部') {
-                return {
-                    goCategories: CATEGORY_NAMES.filter(c => c !== noGoCat),
-                    noGoCategories: [noGoCat],
-                };
-            }
-            if (noGoCat === '全部') {
-                return {
-                    goCategories: [goCat],
-                    noGoCategories: CATEGORY_NAMES.filter(c => c !== goCat),
-                };
-            }
-            if (goCat === noGoCat) {
-                return { goCategories: [goCat], noGoCategories: [] };
-            }
-            return { goCategories: [goCat], noGoCategories: [noGoCat] };
-        }
-
-        function getAmbiguousGngFoodIds(goCategories, noGoCategories) {
-            const goSet = new Set(goCategories);
-            const noGoSet = new Set(noGoCategories);
-            const flagsByName = new Map();
-            for (const item of FOOD_DATA) {
-                if (!flagsByName.has(item.name)) flagsByName.set(item.name, { go: false, noGo: false });
-                const flags = flagsByName.get(item.name);
-                if (goSet.has(item.category)) flags.go = true;
-                if (noGoSet.has(item.category)) flags.noGo = true;
-            }
-            const ambiguous = new Set();
-            for (const item of FOOD_DATA) {
-                const flags = flagsByName.get(item.name);
-                if (flags.go && flags.noGo) ambiguous.add(getFoodId(item));
-            }
-            return ambiguous;
-        }
-
-        function pickGngTrialItems(categories, count, excludeIds) {
-            const category = pickRandom(categories);
-            const pool = FOOD_DATA.filter(item => item.category === category && !excludeIds.has(getFoodId(item)));
-            const result = [];
-            const remaining = pool.slice();
-            for (let i = 0; i < count; i++) {
-                if (remaining.length === 0) remaining.push(...pool);
-                result.push(remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0]);
-            }
-            return result;
-        }
-
-        function getGngRule() {
-            return { goCat: gngState.goCategory, noGoCat: gngState.noGoCategory };
-        }
-
-        function updateGngRuleDisplay(showPopup = false) {
-            const { goCat, noGoCat } = getGngRule();
-            const goDisplay = goCat === '全部' ? '其他' : goCat;
-            const noGoDisplay = noGoCat === '全部' ? '其他' : noGoCat;
-            gngGoLabel.textContent = goDisplay;
-            gngNoGoLabel.textContent = noGoDisplay;
-            if (showPopup) {
-                const msg = `任務已變更：✅ ${goDisplay} → ❌ ${noGoDisplay}`;
-                window.CognitiveMessage.show({
-                    title: msg,
-                    subtitle: '請繼續作答！',
-                    pauseTimer: true
-                });
-            }
-        }
-
-        function showGngIntro() {
-            window.CognitiveMessage.show({
-                title: gngRuleText.textContent.trim(),
-                subtitle: '',
-                extraLarge: true,
-                pauseTimer: false
+        function buildSequence(length) {
+            return logic.generateGngSequence({
+                length: length,
+                goCategory: state.goCategory,
+                noGoCategory: state.noGoCategory,
+                imageCount: state.imageCount,
+                foodData: FOOD_DATA,
+                categoryNames: CATEGORY_NAMES,
+                pickRandom: pickRandom,
+                getFoodId: getFoodId
             });
         }
 
-        function isGngGo(items) {
-            const { goCat } = getGngRule();
-            if (goCat === '全部') {
-                const { noGoCat } = getGngRule();
-                if (noGoCat === '全部') {
-                    return true;
-                }
-                return items.some(item => item.category !== noGoCat);
-            }
-            return items.some(item => item.category === goCat);
+        function getGngRule() {
+            return { goCat: state.goCategory, noGoCat: state.noGoCategory };
         }
 
+        function updateGngRuleDisplay(showPopup) {
+            const { goCat, noGoCat } = getGngRule();
+            view.updateRuleLabels(els, goCat, noGoCat);
+            if (showPopup) view.showRuleChangePopup(message, goCat, noGoCat);
+        }
+
+        function showGngIntro() {
+            view.showIntro(message, els.ruleText.textContent.trim());
+        }
+
+        function isGngGo(items) {
+            return logic.isGngGoFor(items, state.goCategory, state.noGoCategory);
+        }
         function switchGngTask() {
             const allCats = ['全部', ...CATEGORY_NAMES];
-            const currentGo = gngState.goCategory;
-            const currentNoGo = gngState.noGoCategory;
+            const currentGo = state.goCategory;
+            const currentNoGo = state.noGoCategory;
 
-            if (gngState.switchType === 'random') {
+            if (state.switchType === 'random') {
                 if (currentNoGo === '全部') {
                     let candidates = CATEGORY_NAMES.filter(c => c !== currentGo);
                     if (candidates.length === 0) return;
-                    gngState.goCategory = pickRandom(candidates);
-                    gngState.noGoCategory = '全部';
+                    state.goCategory = pickRandom(candidates);
+                    state.noGoCategory = '全部';
                     updateGngRuleDisplay(true);
-                    gngState.sequence = generateGngSequence(gngState.sequence.length);
+                    state.sequence = buildSequence(state.sequence.length);
                     return;
                 }
                 if (currentGo === '全部') {
                     let candidates = CATEGORY_NAMES.filter(c => c !== currentNoGo);
                     if (candidates.length === 0) return;
-                    gngState.noGoCategory = pickRandom(candidates);
-                    gngState.goCategory = '全部';
+                    state.noGoCategory = pickRandom(candidates);
+                    state.goCategory = '全部';
                     updateGngRuleDisplay(true);
-                    gngState.sequence = generateGngSequence(gngState.sequence.length);
+                    state.sequence = buildSequence(state.sequence.length);
                     return;
                 }
                 let goCandidates = CATEGORY_NAMES.filter(c => c !== currentGo && c !== currentNoGo);
                 let noGoCandidates = CATEGORY_NAMES.filter(c => c !== currentGo && c !== currentNoGo);
                 if (goCandidates.length === 0 || noGoCandidates.length === 0) return;
-                gngState.goCategory = pickRandom(goCandidates);
-                gngState.noGoCategory = pickRandom(noGoCandidates);
-                if (gngState.goCategory === gngState.noGoCategory) {
-                    const backup = CATEGORY_NAMES.filter(c => c !== gngState.goCategory);
+                state.goCategory = pickRandom(goCandidates);
+                state.noGoCategory = pickRandom(noGoCandidates);
+                if (state.goCategory === state.noGoCategory) {
+                    const backup = CATEGORY_NAMES.filter(c => c !== state.goCategory);
                     if (backup.length > 0) {
-                        gngState.noGoCategory = pickRandom(backup);
+                        state.noGoCategory = pickRandom(backup);
                     }
                 }
                 updateGngRuleDisplay(true);
-                gngState.sequence = generateGngSequence(gngState.sequence.length);
-            } else if (gngState.switchType === 'swap') {
+                state.sequence = buildSequence(state.sequence.length);
+            } else if (state.switchType === 'swap') {
                 if (currentGo === '全部' && currentNoGo === '全部') {
                     return;
                 }
                 const temp = currentGo;
-                gngState.goCategory = currentNoGo;
-                gngState.noGoCategory = temp;
+                state.goCategory = currentNoGo;
+                state.noGoCategory = temp;
                 updateGngRuleDisplay(true);
-                gngState.sequence = generateGngSequence(gngState.sequence.length);
+                state.sequence = buildSequence(state.sequence.length);
             }
         }
 
         function pauseGngTimer() {
-            if (!gngState.isPlaying || gngState.timerPaused) return;
-            gngState.timerPaused = true;
+            if (!state.isPlaying || state.timerPaused) return;
+            state.timerPaused = true;
             gngActivity.pause();
         }
 
         function startGng() {
-            if (gngState.isPlaying) return;
-            gngState.sequence = generateGngSequence(50);
-            gngState.currentIndex = -1;
-            gngState.score = 0;
-            gngState.totalTrials = 0;
-            gngState.correctHits = 0;
-            gngState.roundCounter = 0;
-            gngState.timerPaused = false;
-            gngState.messagePaused = false;
-            updateGngScore();
+            if (state.isPlaying) return;
+            state.sequence = buildSequence(50);
+            state.currentIndex = -1;
+            state.score = 0;
+            state.totalTrials = 0;
+            state.correctHits = 0;
+            state.roundCounter = 0;
+            state.timerPaused = false;
+            state.messagePaused = false;
+            view.setScore(els.scoreNum, state.score);
             updateGngRuleDisplay(false);
-            gngState.isPlaying = true;
+            state.isPlaying = true;
             syncGngPlayButton();
-            gngState.matchPending = false;
-            gngActivity.start(gngState.speed);
+            state.matchPending = false;
+            gngActivity.start(state.speed);
             nextGngImage();
         }
 
         function pauseGng() {
             gngActivity.stop();
-            gngState.isPlaying = false;
-            gngState.timerPaused = false;
-            gngState.messagePaused = false;
+            state.isPlaying = false;
+            state.timerPaused = false;
+            state.messagePaused = false;
             syncGngPlayButton();
-            window.CognitiveFeedback.clear(gngGridWrapper);
+            feedback.clear(els.gridWrapper);
+        }
+
+        function resetGng() {
+            if (gngActivity) gngActivity.stop();
+            state.isPlaying = false;
+            state.timerPaused = false;
+            state.messagePaused = false;
+            state.sequence = [];
+            state.currentIndex = -1;
+            state.score = 0;
+            state.totalTrials = 0;
+            state.correctHits = 0;
+            state.roundCounter = 0;
+            state.matchPending = false;
+            state.currentItems = [];
+            view.setScore(els.scoreNum, state.score);
+            syncGngPlayButton();
+            if (feedback) feedback.clear(els.gridWrapper);
+        }
+
+        function destroyGng() {
+            if (gngActivity) gngActivity.stop();
+            try { controller.abort(); } catch (e) { /* already aborted */ }
+            state.isPlaying = false;
         }
 
         function renderGngImage() {
-            if (gngState.currentIndex < 0 || gngState.sequence.length === 0) return;
-            const items = gngState.sequence[gngState.currentIndex];
-            gngState.currentItems = items;
-            gngState.matchPending = false;
-
-            const count = items.length;
-            gngGridContainer.className = `gng-grid-container cols-${count}`;
-            gngGridContainer.innerHTML = '';
-            items.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'gng-card';
-                const img = document.createElement('img');
-                img.src = item.image;
-                img.alt = '';
-                img.setAttribute('aria-label', item.name);
-                img.onerror = function() {
-                    this.style.display = 'none';
-                    const fallback = document.createElement('span');
-                    fallback.textContent = '🖼️';
-                    fallback.style.fontSize = 'calc(40px * var(--ui-scale))';
-                    this.parentElement.appendChild(fallback);
-                };
-                card.appendChild(img);
-                const magnifyBtn = document.createElement('button');
-                magnifyBtn.className = 'magnify-btn gng-magnify-btn';
-                magnifyBtn.textContent = '🔍';
-                magnifyBtn.title = '放大圖片';
-                magnifyBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    openMagnify(item.image, item.name);
-                });
-                card.appendChild(magnifyBtn);
-                gngGridContainer.appendChild(card);
-            });
+            if (state.currentIndex < 0 || state.sequence.length === 0) return;
+            const items = state.sequence[state.currentIndex];
+            state.currentItems = items;
+            state.matchPending = false;
+            view.renderGngImage(doc, els, items, openMagnify);
         }
 
         function nextGngImage() {
-            gngState.currentIndex++;
-            if (gngState.currentIndex >= gngState.sequence.length) {
-                gngState.sequence = generateGngSequence(50);
-                gngState.currentIndex = 0;
+            state.currentIndex++;
+            if (state.currentIndex >= state.sequence.length) {
+                state.sequence = buildSequence(50);
+                state.currentIndex = 0;
             }
 
-            gngState.roundCounter++;
-            if (gngState.autoSwitch && gngState.roundCounter > gngState.switchFreq) {
-                gngState.roundCounter = 0;
+            state.roundCounter++;
+            if (state.autoSwitch && state.roundCounter > state.switchFreq) {
+                state.roundCounter = 0;
                 switchGngTask();
             }
 
@@ -320,273 +252,269 @@
             resetGngTimer();
         }
 
-
-        let gngCardsTimer = null;
-
-        // 回饋燈光落在遊戲卡片上（而非按鈕）
-        function flashGngCards(correct) {
-            clearTimeout(gngCardsTimer);
-            const cards = Array.from(gngGridContainer.querySelectorAll('.gng-card'));
-            cards.forEach(card => card.classList.remove('feedback-correct', 'feedback-wrong'));
-            cards.forEach(card => card.classList.add(correct ? 'feedback-correct' : 'feedback-wrong'));
-            gngCardsTimer = setTimeout(function () {
-                cards.forEach(card => card.classList.remove('feedback-correct', 'feedback-wrong'));
-            }, 600);
-        }
-
         function handleGngResponse(isGo) {
-            if (gngState.currentIndex < 0 || gngState.matchPending) return;
-            const items = gngState.currentItems;
+            if (state.currentIndex < 0 || state.matchPending) return;
+            const items = state.currentItems;
             const actualGo = isGngGo(items);
             const correct = (isGo === actualGo);
-            gngState.matchPending = true;
+            state.matchPending = true;
             pauseGngTimer();
 
             if (correct) {
-                gngState.score++;
-                gngState.correctHits++;
-                CognitiveAudio.play('correct');
-                window.CognitiveFeedback.show(gngGridWrapper, '✅ 正確！', 'correct');
+                state.score++;
+                state.correctHits++;
+                audio.play('correct');
+                feedback.show(els.gridWrapper, '✅ 正確！', 'correct');
             } else {
-                CognitiveAudio.play('wrong');
-                window.CognitiveFeedback.show(gngGridWrapper, '❌ 再試一次！', 'wrong');
+                audio.play('wrong');
+                feedback.show(els.gridWrapper, '❌ 再試一次！', 'wrong');
             }
-            flashGngCards(correct);
-            gngState.totalTrials++;
-            updateGngScore();
+            view.flashGngCards(els, correct);
+            state.totalTrials++;
+            view.setScore(els.scoreNum, state.score);
 
             if (correct) {
                 setTimeout(() => {
-                    gngState.timerPaused = false;
-                    if (gngState.isPlaying) nextGngImage();
+                    state.timerPaused = false;
+                    if (state.isPlaying) nextGngImage();
                     else {
-                        gngState.matchPending = false;
+                        state.matchPending = false;
                     }
                 }, 600);
             } else {
                 setTimeout(() => {
-                    gngState.matchPending = false;
+                    state.matchPending = false;
                 }, 600);
             }
         }
 
-        function updateGngScore() { gngScoreNum.textContent = gngState.score; }
-
         function changeGngSpeed(delta) {
-            let newSpeed = gngState.speed + delta;
+            let newSpeed = state.speed + delta;
             if (newSpeed < 1) newSpeed = 1;
             if (newSpeed > 10) newSpeed = 10;
-            gngState.speed = newSpeed;
-            gngSpeedDisplay.textContent = newSpeed;
+            state.speed = newSpeed;
+            els.speedDisplay.textContent = newSpeed;
             gngActivity.setSpeed(newSpeed);
-            if (gngState.isPlaying && !gngState.timerPaused) {
+            if (state.isPlaying && !state.timerPaused) {
                 gngActivity.reset();
             }
         }
-
-        gngAutoToggle.addEventListener('click', function() {
-            gngState.autoSwitch = !gngState.autoSwitch;
-            this.textContent = gngState.autoSwitch ? '開啟' : '關閉';
-            this.style.borderColor = gngState.autoSwitch ? 'var(--highlight-correct)' : 'var(--border-color)';
-            this.style.background = gngState.autoSwitch ? 'var(--toggle-on-bg)' : 'var(--card-bg)';
-        });
-
-        gngStartBtn.addEventListener('click', function() {
-            gngState.goCategory = gngGoCategory.value;
-            gngState.noGoCategory = gngNoGoCategory.value;
-            gngState.switchType = gngSwitchType.value;
-            gngState.switchFreq = parseInt(gngSwitchFreq.value, 10);
-            gngState.roundCounter = 0;
+        function startGngFromSettings() {
+            state.goCategory = els.goCategory.value;
+            state.noGoCategory = els.noGoCategory.value;
+            state.switchType = els.switchType.value;
+            state.switchFreq = parseInt(els.switchFreq.value, 10);
+            state.roundCounter = 0;
             updateGngRuleDisplay(false);
-            gngState.score = 0;
-            gngState.totalTrials = 0;
-            gngState.correctHits = 0;
-            updateGngScore();
-            gngState.currentIndex = -1;
-            gngState.currentItems = [];
-            gngState.matchPending = false;
-            gngState.sequence = generateGngSequence(50);
-            if (window.CognitiveRouter) {
-                if (window.CognitiveRouter.navigate('gngGame')) {
-                    window.CognitiveRouter.afterTransition(function () {
-                        syncTopBarCentering();
+            state.score = 0;
+            state.totalTrials = 0;
+            state.correctHits = 0;
+            view.setScore(els.scoreNum, state.score);
+            state.currentIndex = -1;
+            state.currentItems = [];
+            state.matchPending = false;
+            state.sequence = buildSequence(50);
+            if (router) {
+                if (router.navigate('gngGame')) {
+                    router.afterTransition(function () {
+                        if (syncTopBarCentering) syncTopBarCentering();
                         nextGngImage();
                         showGngIntro();
                     });
                 }
             } else {
-                document.getElementById('gngSettings').classList.add('hidden');
-                document.getElementById('gngGame').style.display = 'flex';
-                syncTopBarCentering();
+                doc.getElementById('gngSettings').classList.add('hidden');
+                doc.getElementById('gngGame').style.display = 'flex';
+                if (syncTopBarCentering) syncTopBarCentering();
                 nextGngImage();
                 showGngIntro();
             }
-        });
-
-        gngBackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) {
-                window.CognitiveRouter.goBack();
-            } else {
-                document.getElementById('gngGame').style.display = 'none';
-                document.getElementById('gngSettings').classList.remove('hidden');
-                pauseGng();
-            }
-        });
-
-        gngSettingsBackBtn.addEventListener('click', function() {
-            if (window.CognitiveRouter) {
-                window.CognitiveRouter.goBack();
-            } else {
-                document.getElementById('gngSettings').classList.add('hidden');
-                pauseGng();
-                goToMainMenu();
-            }
-        });
-
-        gngPlayBtn.addEventListener('click', function() {
-            if (gngState.isPlaying) { pauseGng(); } else { startGng(); }
-        });
-
-        gngGoBtn.addEventListener('click', function() { handleGngResponse(true); });
-        gngNoGoBtn.addEventListener('click', function() { handleGngResponse(false); });
-
-        if (window.CognitiveKeyboard) {
-            window.CognitiveKeyboard.registerScreen('gngGame', {
-                j: function () { handleGngResponse(true); },
-                k: function () { handleGngResponse(false); },
-                space: function () { if (!gngState.matchPending) { gngState.timerPaused = false; nextGngImage(); } },
-                '-': function () { changeGngSpeed(-1); },
-                '=': function () { changeGngSpeed(1); },
-                p: function () { if (gngState.isPlaying) { pauseGng(); } else { startGng(); } }
-            });
         }
 
-        gngSpeedDown.addEventListener('click', function() { changeGngSpeed(-1); });
-        gngSpeedUp.addEventListener('click', function() { changeGngSpeed(1); });
-
-        gngGridWrapper.addEventListener('click', function(e) {
-            if (!gngState.matchPending && e.target.closest('.gng-card')) {
-                gngState.timerPaused = false;
-                nextGngImage();
-            }
-        });
-
-        gngRuleText.addEventListener('click', function(e) {
+        function onRuleTextClick(e) {
             e.stopPropagation();
-            const currentGo = gngState.goCategory;
-            const currentNoGo = gngState.noGoCategory;
+            const currentGo = state.goCategory;
+            const currentNoGo = state.noGoCategory;
             const goDisplay = currentGo === '全部' ? '其他' : currentGo;
             const noGoDisplay = currentNoGo === '全部' ? '其他' : currentNoGo;
 
-            window.CognitiveMessage.show({
+            message.show({
                 title: '🔄 立即切換任務',
                 subtitle: `目前：✅ ${goDisplay} → ❌ ${noGoDisplay}`,
                 buttons: [{
                     text: '🎲 隨機變更',
                     className: 'btn-stay',
-                    action: function() {
-                        const allCats = ['全部', ...CATEGORY_NAMES];
-                        const currentGo2 = gngState.goCategory;
-                        const currentNoGo2 = gngState.noGoCategory;
+                    action: function () {
+                        const currentGo2 = state.goCategory;
+                        const currentNoGo2 = state.noGoCategory;
                         if (currentNoGo2 === '全部') {
                             let candidates = CATEGORY_NAMES.filter(c => c !== currentGo2);
                             if (candidates.length === 0) return;
-                            gngState.goCategory = pickRandom(candidates);
-                            gngState.noGoCategory = '全部';
+                            state.goCategory = pickRandom(candidates);
+                            state.noGoCategory = '全部';
                         } else if (currentGo2 === '全部') {
                             let candidates = CATEGORY_NAMES.filter(c => c !== currentNoGo2);
                             if (candidates.length === 0) return;
-                            gngState.noGoCategory = pickRandom(candidates);
-                            gngState.goCategory = '全部';
+                            state.noGoCategory = pickRandom(candidates);
+                            state.goCategory = '全部';
                         } else {
                             let goCandidates = CATEGORY_NAMES.filter(c => c !== currentGo2 && c !== currentNoGo2);
                             let noGoCandidates = CATEGORY_NAMES.filter(c => c !== currentGo2 && c !== currentNoGo2);
                             if (goCandidates.length === 0 || noGoCandidates.length === 0) return;
-                            gngState.goCategory = pickRandom(goCandidates);
-                            gngState.noGoCategory = pickRandom(noGoCandidates);
-                            if (gngState.goCategory === gngState.noGoCategory) {
-                                const backup = CATEGORY_NAMES.filter(c => c !== gngState.goCategory);
+                            state.goCategory = pickRandom(goCandidates);
+                            state.noGoCategory = pickRandom(noGoCandidates);
+                            if (state.goCategory === state.noGoCategory) {
+                                const backup = CATEGORY_NAMES.filter(c => c !== state.goCategory);
                                 if (backup.length > 0) {
-                                    gngState.noGoCategory = pickRandom(backup);
+                                    state.noGoCategory = pickRandom(backup);
                                 }
                             }
                         }
                         updateGngRuleDisplay(true);
-                        gngState.sequence = generateGngSequence(gngState.sequence.length);
-                        gngState.roundCounter = 0;
+                        state.sequence = buildSequence(state.sequence.length);
+                        state.roundCounter = 0;
                         resetGngTimer();
                     }
                 }, {
                     text: '🔄 互換',
                     className: 'btn-stay',
-                    action: function() {
-                        const temp = gngState.goCategory;
-                        gngState.goCategory = gngState.noGoCategory;
-                        gngState.noGoCategory = temp;
+                    action: function () {
+                        const temp = state.goCategory;
+                        state.goCategory = state.noGoCategory;
+                        state.noGoCategory = temp;
                         updateGngRuleDisplay(true);
-                        gngState.sequence = generateGngSequence(gngState.sequence.length);
-                        gngState.roundCounter = 0;
+                        state.sequence = buildSequence(state.sequence.length);
+                        state.roundCounter = 0;
                         resetGngTimer();
                     }
                 }],
                 pauseTimer: false
             });
-        });
-
-        gngSpeedDisplay.textContent = gngState.speed;
-        gngGoCategory.value = '水果';
-        gngNoGoCategory.value = '全部';
-        gngAutoToggle.textContent = '關閉';
-        gngAutoToggle.style.borderColor = 'var(--border-color)';
-        gngAutoToggle.style.background = 'var(--card-bg)';
-        gngSwitchType.value = 'swap';
-        gngSwitchFreq.value = '10';
-
-        if (gngPreferences) {
-            gngGoCategory.value = gngPreferences.goCategory;
-            gngNoGoCategory.value = gngPreferences.noGoCategory;
-            gngState.autoSwitch = gngPreferences.autoSwitch;
-            gngAutoToggle.textContent = gngState.autoSwitch ? '開啟' : '關閉';
-            gngAutoToggle.style.borderColor = gngState.autoSwitch ? 'var(--highlight-correct)' : 'var(--border-color)';
-            gngAutoToggle.style.background = gngState.autoSwitch ? 'var(--toggle-on-bg)' : 'var(--card-bg)';
-            gngSwitchType.value = gngPreferences.switchType;
-            gngSwitchFreq.value = String(gngPreferences.switchFreq);
         }
 
-        if (gngSaveSettingsBtn) {
-            gngSaveSettingsBtn.addEventListener('click', function() {
-                const prefs = {
-                    goCategory: gngGoCategory.value,
-                    noGoCategory: gngNoGoCategory.value,
-                    autoSwitch: gngState.autoSwitch,
-                    switchType: gngSwitchType.value,
-                    switchFreq: parseInt(gngSwitchFreq.value, 10)
-                };
-                if (window.CognitivePrefs) {
-                    CognitivePrefs.save('cognitiveGngPrefs', prefs);
-                }
-                window.CognitiveMessage.show({
-                    title: '設定已儲存',
-                    subtitle: '下次進入遊戲時會使用已儲存的偏好設定。',
-                    buttons: [{
-                        text: '好的',
-                        className: 'btn-stay',
-                        action: function() {}
-                    }],
-                    pauseTimer: false
-                });
+        function saveGngSettings() {
+            const prefsObj = {
+                goCategory: els.goCategory.value,
+                noGoCategory: els.noGoCategory.value,
+                autoSwitch: state.autoSwitch,
+                switchType: els.switchType.value,
+                switchFreq: parseInt(els.switchFreq.value, 10)
+            };
+            if (prefs) {
+                prefs.save('cognitiveGngPrefs', prefsObj);
+            }
+            message.show({
+                title: '設定已儲存',
+                subtitle: '下次進入遊戲時會使用已儲存的偏好設定。',
+                buttons: [{
+                    text: '好的',
+                    className: 'btn-stay',
+                    action: function () {}
+                }],
+                pauseTimer: false
             });
         }
+        view.bindGngControls(els, keyboard, listenOpts, {
+            onAutoToggle: function (btn) {
+                state.autoSwitch = !state.autoSwitch;
+                view.syncAutoToggle(btn, state.autoSwitch);
+            },
+            onStart: startGngFromSettings,
+            onBack: function () {
+                if (router) {
+                    router.goBack();
+                } else {
+                    doc.getElementById('gngGame').style.display = 'none';
+                    doc.getElementById('gngSettings').classList.remove('hidden');
+                    pauseGng();
+                }
+            },
+            onSettingsBack: function () {
+                if (router) {
+                    router.goBack();
+                } else {
+                    doc.getElementById('gngSettings').classList.add('hidden');
+                    pauseGng();
+                    if (typeof global.goToMainMenu === 'function') global.goToMainMenu();
+                }
+            },
+            onPlayPause: function () { if (state.isPlaying) { pauseGng(); } else { startGng(); } },
+            onGo: function () { handleGngResponse(true); },
+            onNoGo: function () { handleGngResponse(false); },
+            onSpeed: function (delta) { changeGngSpeed(delta); },
+            onGridClick: function (e) {
+                if (!state.matchPending && e.target.closest('.gng-card')) {
+                    state.timerPaused = false;
+                    nextGngImage();
+                }
+            },
+            onRuleTextClick: onRuleTextClick,
+            onSaveSettings: saveGngSettings,
+            keyboard: {
+                j: function () { handleGngResponse(true); },
+                k: function () { handleGngResponse(false); },
+                space: function () { if (!state.matchPending) { state.timerPaused = false; nextGngImage(); } },
+                '-': function () { changeGngSpeed(-1); },
+                '=': function () { changeGngSpeed(1); },
+                p: function () { if (state.isPlaying) { pauseGng(); } else { startGng(); } }
+            }
+        });
 
-        if (window.CognitiveRouter) {
-            window.CognitiveRouter.defineScreen('gngSettings', {
+        els.speedDisplay.textContent = state.speed;
+        els.goCategory.value = '水果';
+        els.noGoCategory.value = '全部';
+        view.syncAutoToggle(els.autoToggle, false);
+        els.switchType.value = 'swap';
+        els.switchFreq.value = '10';
+
+        if (gngPreferences) {
+            view.applySettings(els, gngPreferences);
+            state.autoSwitch = gngPreferences.autoSwitch;
+            view.syncAutoToggle(els.autoToggle, state.autoSwitch);
+        }
+
+        if (router) {
+            router.defineScreen('gngSettings', {
                 exit: pauseGng,
                 back: 'mainMenu'
             });
-            window.CognitiveRouter.defineScreen('gngGame', {
+            router.defineScreen('gngGame', {
                 exit: pauseGng,
                 back: 'gngSettings'
             });
         }
 
-        // =============================================================
+        return {
+            start: startGng,
+            pause: pauseGng,
+            reset: resetGng,
+            destroy: destroyGng
+        };
+    }
+
+    var api = { mount: mount };
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = api;
+    }
+
+    if (typeof window !== 'undefined') {
+        window.CognitiveGng = api;
+        // Transitional self-mount preserving the original load-time behaviour.
+        // Later strangler steps move this call into the router/orchestrator.
+        api.mount(document, {
+            foodData: window.CognitiveFoodData,
+            logic: window.CognitiveGngLogic,
+            view: window.CognitiveGngView,
+            prefs: window.CognitivePrefs,
+            activity: window.CognitiveActivity,
+            message: window.CognitiveMessage,
+            feedback: window.CognitiveFeedback,
+            router: window.CognitiveRouter,
+            keyboard: window.CognitiveKeyboard,
+            audio: window.CognitiveAudio,
+            openMagnify: window.openMagnify,
+            syncTopBarCentering: window.syncTopBarCentering
+        });
+    }
+})(typeof window !== 'undefined' ? window : globalThis);

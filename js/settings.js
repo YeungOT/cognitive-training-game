@@ -147,7 +147,8 @@
     };
 
     function getFoodCategoryOptions() {
-        var names = typeof CATEGORY_NAMES !== 'undefined' ? CATEGORY_NAMES : [];
+        var foodData = typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null;
+        var names = foodData ? foodData.CATEGORY_NAMES : [];
         return ['全部'].concat(names);
     }
 

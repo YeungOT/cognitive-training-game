@@ -44,7 +44,8 @@
         document.getElementById('gameDifferentBtn').addEventListener('click', () => switchGame('different'));
         document.getElementById('gameShoppingBtn').addEventListener('click', () => switchGame('shopping'));
 
-        showNames = true;
-        applyNameVisibility();
+        // Name visibility is initialised by the shared NameVisibility singleton
+        // in js/food/name-visibility.js (created at load, applied once), so no
+        // bare showNames/applyNameVisibility call is needed here.
 
         console.log('✅ 所有遊戲已載入，使用 ☰ 選單控制設定！');
