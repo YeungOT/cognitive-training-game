@@ -90,6 +90,16 @@
             --btn-hover-correct: #4cb88a;
             --btn-hover-wrong: #e06b6b;
         }
+        /* 動態視埠單位（dvh/dvw）：跟隨實際可見視埠，避免 iOS Safari 的 100vh
+
+           大於可見區域而在底部留下空白條；不支援 dvh 時自動退回上面的 vh/vw。 */
+        @supports (height: 100dvh) {
+            :root {
+                --ui-scale: min(calc(100dvw / 1280px), calc(100dvh / 800px));
+                --avail-w: calc(100dvw - var(--safe-left) - var(--safe-right));
+                --avail-h: calc(100dvh - var(--safe-top) - var(--safe-bottom));
+            }
+        }
 
         [data-theme="dark"] {
             --bg-color: #1a1a2e;

@@ -4,6 +4,7 @@
         .app-screen {
             width: 100vw;
             height: 100vh;
+            height: 100dvh; /* 動態視埠高度；不支援時退回上一行 100vh */
         }
         .hidden {
             display: none !important;
