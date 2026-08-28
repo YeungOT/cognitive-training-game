@@ -8,6 +8,7 @@
         var games = new Map();
         var menuOrders = new Set();
         var entryRoutes = new Set();
+        var activeGameId = null;
 
         function assertNonEmptyString(value, label) {
             if (typeof value !== 'string' || value.trim() === '') {
@@ -89,9 +90,16 @@
             if (!router || typeof router.navigate !== 'function') {
                 throw new Error('Router is not available');
             }
+
+            var previousGame = activeGameId ? games.get(activeGameId) : null;
+            if (previousGame && previousGame.id !== id && previousGame.instance) {
+                previousGame.instance.pause();
+            }
+
             if (!router.navigate(game.entryRoute)) {
                 throw new Error('Unable to navigate to game route: ' + game.entryRoute);
             }
+            activeGameId = id;
         }
 
         function createButton(doc, game) {

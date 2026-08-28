@@ -89,4 +89,33 @@ test('list and renderMenu preserve explicit menu order', function () {
     assert.equal(router.lastRoute, 'bRoute');
 });
 
+test('navigating between games pauses the previous lifecycle', function () {
+    const router = { navigate(route) { this.routes.push(route); return true; }, routes: [] };
+    const registry = createGameRegistry({ router });
+    const calls = { a: [], b: [] };
+    function lifecycle(id) {
+        return {
+            start: () => calls[id].push('start'),
+            pause: () => calls[id].push('pause'),
+            reset: () => calls[id].push('reset'),
+            destroy: () => calls[id].push('destroy')
+        };
+    }
+    registry.register({
+        id: 'a', title: 'A', icon: 'A', entryRoute: 'aRoute', menuOrder: 1,
+        setup: () => lifecycle('a')
+    });
+    registry.register({
+        id: 'b', title: 'B', icon: 'B', entryRoute: 'bRoute', menuOrder: 2,
+        setup: () => lifecycle('b')
+    });
 
+    registry.navigate('a');
+    registry.navigate('b');
+    assert.deepEqual(calls.a, ['pause']);
+    assert.deepEqual(calls.b, []);
+    assert.deepEqual(router.routes, ['aRoute', 'bRoute']);
+
+    registry.navigate('b');
+    assert.deepEqual(calls.b, []);
+});
