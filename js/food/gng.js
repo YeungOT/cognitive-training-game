@@ -283,7 +283,11 @@
                 }, 600);
             } else {
                 setTimeout(() => {
-                    state.matchPending = false;
+                    state.timerPaused = false;
+                    if (state.isPlaying) nextGngImage();
+                    else {
+                        state.matchPending = false;
+                    }
                 }, 600);
             }
         }
@@ -302,6 +306,10 @@
         function startGngFromSettings() {
             state.goCategory = els.goCategory.value;
             state.noGoCategory = els.noGoCategory.value;
+            if (state.goCategory !== '全部' && state.goCategory === state.noGoCategory) {
+                const others = CATEGORY_NAMES.filter(function (c) { return c !== state.goCategory; });
+                if (others.length > 0) state.noGoCategory = pickRandom(others);
+            }
             state.switchType = els.switchType.value;
             state.switchFreq = parseInt(els.switchFreq.value, 10);
             state.roundCounter = 0;
@@ -318,16 +326,14 @@
                 if (router.navigate('gngGame')) {
                     router.afterTransition(function () {
                         if (syncTopBarCentering) syncTopBarCentering();
-                        nextGngImage();
-                        showGngIntro();
+                        startGng();
                     });
                 }
             } else {
                 doc.getElementById('gngSettings').classList.add('hidden');
                 doc.getElementById('gngGame').style.display = 'flex';
                 if (syncTopBarCentering) syncTopBarCentering();
-                nextGngImage();
-                showGngIntro();
+                startGng();
             }
         }
 

@@ -22,6 +22,7 @@
         };
         var keyFor = options.keyFor || defaultKeyFor;
         var random = options.random || Math.random;
+        var seedValues = options.seedValues || [];
 
         if (matchProbability === undefined || matchProbability === null) {
             matchProbability = DEFAULT_MATCH_PROBABILITY;
@@ -30,9 +31,13 @@
         var trials = [];
         for (var i = 0; i < length; i++) {
             if (i < n) {
+                var value = cloneValue(pickRandom(choices, random));
+                // When seedValues are provided (previous sequence tail), compute isMatch
+                // against the old tail so cross-sequence repeats are correctly identified.
+                // seedValues[i] holds the old-sequence item N-back from this position.
                 trials[i] = {
-                    value: cloneValue(pickRandom(choices, random)),
-                    isMatch: false
+                    value: value,
+                    isMatch: i < seedValues.length && keyFor(value) === keyFor(seedValues[i])
                 };
                 continue;
             }

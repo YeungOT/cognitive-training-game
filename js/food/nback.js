@@ -51,7 +51,7 @@
             score: 0,
             totalTrials: 0,
             correctHits: 0,
-            falseAlarms: 0,
+            correctRejections: 0,
             interval: 0,
             currentItem: null,
             matchPending: false
@@ -72,8 +72,16 @@
 
         var nbackView = view.createNbackView(doc, els, nbackActivity, 240);
 
-        function buildSequence(length) {
-            return generateNbackSequence(length, state.n, FOOD_DATA, sequence);
+        function buildSequence(length, seedValues) {
+            return sequence.generateTrials({
+                choices: FOOD_DATA,
+                n: state.n,
+                length: length,
+                matchProbability: sequence.matchProbability,
+                cloneValue: function (item) { return { ...item }; },
+                keyFor: function (item) { return item.name; },
+                seedValues: seedValues || []
+            });
         }
 
         function startNback() {
@@ -84,7 +92,7 @@
             state.score = 0;
             state.totalTrials = 0;
             state.correctHits = 0;
-            state.falseAlarms = 0;
+            state.correctRejections = 0;
             nbackView.setScore(state.score);
             state.isPlaying = true;
             nbackView.syncPlayButton(state.isPlaying);
@@ -109,7 +117,7 @@
             state.score = 0;
             state.totalTrials = 0;
             state.correctHits = 0;
-            state.falseAlarms = 0;
+            state.correctRejections = 0;
             state.currentItem = null;
             state.matchPending = false;
             nbackView.setScore(state.score);
@@ -120,7 +128,11 @@
         function nextNbackImage(fromTimer = false) {
             let next = state.currentIndex + 1;
             if (next >= state.sequence.length) {
-                state.sequence = buildSequence(50);
+                var tail = [];
+                for (var t = Math.max(0, state.sequence.length - state.n); t < state.sequence.length; t++) {
+                    tail.push(state.sequence[t].value);
+                }
+                state.sequence = buildSequence(50, tail);
                 next = 0;
             }
             nbackView.showTrial(state.sequence, next, {
@@ -152,7 +164,7 @@
             if (correct) {
                 state.score++;
                 if (isMatch) state.correctHits++;
-                else state.falseAlarms++;
+                else state.correctRejections++;
                 nbackView.showFeedback(feedback, '✅ 正確！', 'correct');
                 audio.play('correct');
             } else {
@@ -248,7 +260,7 @@
                 state.score = 0;
                 state.totalTrials = 0;
                 state.correctHits = 0;
-                state.falseAlarms = 0;
+                state.correctRejections = 0;
                 nbackView.setScore(state.score);
             }
             els.speedDisplay.textContent = state.speed;

@@ -51,7 +51,8 @@
             matchLocked: {},
             score: 0,
             totalTrials: 0,
-            interval: 0
+            interval: 0,
+            rebuildCount: 0
         };
 
         var controller = new AbortController();
@@ -67,8 +68,8 @@
             onResume: syncDualNbackSessionUi
         });
 
-        function buildDualSequences() {
-            state.sequences = logic.generateDualSequences(state.modalities, state.n, DUAL_SEQ_LEN, state.positionGrid, state.colorPalette, FOOD_DATA, DUAL_GRIDS, DUAL_PALETTES, sequence);
+        function buildDualSequences(seedTails) {
+            state.sequences = logic.generateDualSequences(state.modalities, state.n, DUAL_SEQ_LEN, state.positionGrid, state.colorPalette, FOOD_DATA, DUAL_GRIDS, DUAL_PALETTES, sequence, seedTails);
         }
 
         function syncDualNbackPlayButton() {
@@ -128,8 +129,18 @@
             dualNbackActivity.hold();
             state.currentIndex++;
             if (state.currentIndex >= DUAL_SEQ_LEN) {
-                buildDualSequences();
+                var seedTails = {};
+                state.modalities.forEach(function (modality) {
+                    var tail = [];
+                    var seq = state.sequences[modality];
+                    for (var t = Math.max(0, seq.length - state.n); t < seq.length; t++) {
+                        tail.push(seq[t].value);
+                    }
+                    seedTails[modality] = tail;
+                });
+                buildDualSequences(seedTails);
                 state.currentIndex = 0;
+                state.rebuildCount++;
             }
             commitDualNbackTrial(state.currentIndex, true);
             dualNbackActivity.reset();
@@ -178,6 +189,10 @@
         function handleDualNbackMatch(modality) {
             if (state.currentIndex < 0 ||
                 state.matchLocked[modality]) return;
+            if (state.currentIndex < state.n && !state.rebuildCount) {
+                feedback.show(els.stage, '還不夠 ' + state.n + ' 步', 'warn');
+                return;
+            }
 
             const trial = state.sequences[modality][state.currentIndex];
             const correct = Boolean(trial && trial.isMatch);

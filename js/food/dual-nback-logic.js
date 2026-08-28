@@ -46,7 +46,8 @@
     }
 
     function getDualModalityValue(modality, value) {
-        if (modality === 'image' || modality === 'audio') return getDualFoodId(value);
+        if (modality === 'image') return value.image || getDualFoodId(value);
+        if (modality === 'audio') return getDualFoodId(value);
         if (modality === 'color') return value.name;
         return value;
     }
@@ -69,9 +70,10 @@
         return [];
     }
 
-    function generateDualSequences(modalities, n, length, positionGrid, colorPalette, foodData, positionGrids, colorPalettes, sequence) {
+    function generateDualSequences(modalities, n, length, positionGrid, colorPalette, foodData, positionGrids, colorPalettes, sequence, seedTails) {
         var sequences = {};
         if (!sequence) return sequences;
+        seedTails = seedTails || {};
         modalities.forEach(function (modality) {
             var choices = getDualModalityChoices(modality, positionGrid, colorPalette, foodData, positionGrids, colorPalettes);
             sequences[modality] = sequence.generateTrials({
@@ -80,7 +82,8 @@
                 length: length,
                 matchProbability: sequence.matchProbability,
                 cloneValue: function (value) { return cloneDualModalityValue(modality, value); },
-                keyFor: function (value) { return getDualModalityValue(modality, value); }
+                keyFor: function (value) { return getDualModalityValue(modality, value); },
+                seedValues: seedTails[modality] || []
             });
         });
         return sequences;
