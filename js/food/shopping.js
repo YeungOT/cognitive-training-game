@@ -577,23 +577,31 @@
         module.exports = api;
     }
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && window.CognitiveGames) {
         window.CognitiveShopping = api;
-        // Transitional self-mount preserving the original load-time behaviour.
-        // Later strangler steps move this call into the router/orchestrator.
-        api.mount(document, {
-            foodData: window.CognitiveFoodData,
-            logic: window.CognitiveShoppingLogic,
-            view: window.CognitiveShoppingView,
-            prefs: window.CognitivePrefs,
-            activityTimer: window.CognitiveActivityTimer,
-            message: window.CognitiveMessage,
-            feedback: window.CognitiveFeedback,
-            router: window.CognitiveRouter,
-            audio: window.CognitiveAudio,
-            openMagnify: window.openMagnify,
-            syncTopBarCentering: window.syncTopBarCentering,
-            nameVisibility: window.CognitiveNameVisibility ? window.CognitiveNameVisibility.shared : null
+        window.CognitiveGames.register({
+            id: 'shopping',
+            title: '買餸',
+            icon: '🛒',
+            entryRoute: 'shoppingSettings',
+            buttonId: 'gameShoppingBtn',
+            menuOrder: 4,
+            setup: function () {
+                return api.mount(document, {
+                    foodData: window.CognitiveFoodData,
+                    logic: window.CognitiveShoppingLogic,
+                    view: window.CognitiveShoppingView,
+                    prefs: window.CognitivePrefs,
+                    activityTimer: window.CognitiveActivityTimer,
+                    message: window.CognitiveMessage,
+                    feedback: window.CognitiveFeedback,
+                    router: window.CognitiveRouter,
+                    audio: window.CognitiveAudio,
+                    openMagnify: window.openMagnify,
+                    syncTopBarCentering: window.syncTopBarCentering,
+                    nameVisibility: window.CognitiveNameVisibility ? window.CognitiveNameVisibility.shared : null
+                });
+            }
         });
     }
 })(typeof window !== 'undefined' ? window : globalThis);

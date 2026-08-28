@@ -260,18 +260,26 @@
 
     if (typeof window !== 'undefined') {
         window.CognitiveDifferent = api;
-        // Transitional self-mount preserving the original load-time behaviour.
-        // Later strangler steps move this call into the router/orchestrator.
-        api.mount(document, {
-            foodData: window.CognitiveFoodData,
-            prefs: window.CognitivePrefs,
-            message: window.CognitiveMessage,
-            feedback: window.CognitiveFeedback,
-            router: window.CognitiveRouter,
-            audio: window.CognitiveAudio,
-            openMagnify: window.openMagnify,
-            hideOverlay: window.hideOverlay,
-            syncTopBarCentering: window.syncTopBarCentering
+        window.CognitiveGames.register({
+            id: 'different',
+            title: '找不同',
+            icon: '🔍',
+            entryRoute: 'differentGame',
+            buttonId: 'gameDifferentBtn',
+            menuOrder: 3,
+            setup: function () {
+                return api.mount(document, {
+                    foodData: window.CognitiveFoodData,
+                    prefs: window.CognitivePrefs,
+                    message: window.CognitiveMessage,
+                    feedback: window.CognitiveFeedback,
+                    router: window.CognitiveRouter,
+                    audio: window.CognitiveAudio,
+                    openMagnify: window.openMagnify,
+                    hideOverlay: window.hideOverlay,
+                    syncTopBarCentering: window.syncTopBarCentering
+                });
+            }
         });
     }
 })(typeof window !== 'undefined' ? window : globalThis);

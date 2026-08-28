@@ -281,20 +281,28 @@
 
     if (typeof window !== 'undefined') {
         window.CognitiveFood = api;
-        // Transitional self-mount preserving the original load-time behaviour.
-        // Later strangler steps move this call into the router/orchestrator.
-        api.mount(document, {
-            foodData: window.CognitiveFoodData,
-            logic: window.CognitiveFoodLogic,
-            view: window.CognitiveFoodView,
-            nameVisibility: window.CognitiveNameVisibility ? window.CognitiveNameVisibility.shared : null,
-            message: window.CognitiveMessage,
-            feedback: window.CognitiveFeedback,
-            router: window.CognitiveRouter,
-            audio: window.CognitiveAudio,
-            openMagnify: window.openMagnify,
-            syncTopBarCentering: window.syncTopBarCentering,
-            hideOverlay: window.hideOverlay
+        window.CognitiveGames.register({
+            id: 'food',
+            title: '食物分類',
+            icon: '❓',
+            entryRoute: 'foodCategorySelect',
+            buttonId: 'gameFoodBtn',
+            menuOrder: 1,
+            setup: function () {
+                return api.mount(document, {
+                    foodData: window.CognitiveFoodData,
+                    logic: window.CognitiveFoodLogic,
+                    view: window.CognitiveFoodView,
+                    nameVisibility: window.CognitiveNameVisibility ? window.CognitiveNameVisibility.shared : null,
+                    message: window.CognitiveMessage,
+                    feedback: window.CognitiveFeedback,
+                    router: window.CognitiveRouter,
+                    audio: window.CognitiveAudio,
+                    openMagnify: window.openMagnify,
+                    syncTopBarCentering: window.syncTopBarCentering,
+                    hideOverlay: window.hideOverlay
+                });
+            }
         });
     }
 })(typeof window !== 'undefined' ? window : globalThis);
