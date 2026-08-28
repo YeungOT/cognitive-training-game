@@ -500,21 +500,29 @@
 
     if (typeof window !== 'undefined') {
         window.CognitiveGng = api;
-        // Transitional self-mount preserving the original load-time behaviour.
-        // Later strangler steps move this call into the router/orchestrator.
-        api.mount(document, {
-            foodData: window.CognitiveFoodData,
-            logic: window.CognitiveGngLogic,
-            view: window.CognitiveGngView,
-            prefs: window.CognitivePrefs,
-            activity: window.CognitiveActivity,
-            message: window.CognitiveMessage,
-            feedback: window.CognitiveFeedback,
-            router: window.CognitiveRouter,
-            keyboard: window.CognitiveKeyboard,
-            audio: window.CognitiveAudio,
-            openMagnify: window.openMagnify,
-            syncTopBarCentering: window.syncTopBarCentering
+        window.CognitiveGames.register({
+            id: 'gng',
+            title: 'Go/No Go',
+            icon: '✅',
+            entryRoute: 'gngSettings',
+            buttonId: 'gameGngBtn',
+            menuOrder: 2,
+            setup: function () {
+                return api.mount(document, {
+                    foodData: window.CognitiveFoodData,
+                    logic: window.CognitiveGngLogic,
+                    view: window.CognitiveGngView,
+                    prefs: window.CognitivePrefs,
+                    activity: window.CognitiveActivity,
+                    message: window.CognitiveMessage,
+                    feedback: window.CognitiveFeedback,
+                    router: window.CognitiveRouter,
+                    keyboard: window.CognitiveKeyboard,
+                    audio: window.CognitiveAudio,
+                    openMagnify: window.openMagnify,
+                    syncTopBarCentering: window.syncTopBarCentering
+                });
+            }
         });
     }
 })(typeof window !== 'undefined' ? window : globalThis);
