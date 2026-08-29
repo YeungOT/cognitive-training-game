@@ -95,7 +95,7 @@
             throw new Error('Top bar dropdown options must not be empty');
         }
         const wrapper = element(doc, 'div', 'dropdown-wrapper');
-        const select = element(doc, 'select', '', dropdown.selectId);
+        const select = element(doc, 'select', dropdown.selectClassName || '', dropdown.selectId);
         if (dropdown.label) {
             const label = element(doc, 'label');
             label.setAttribute('for', dropdown.selectId);

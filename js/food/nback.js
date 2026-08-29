@@ -37,9 +37,25 @@
         var audio = deps.audio || (typeof global.CognitiveAudio !== 'undefined' ? global.CognitiveAudio : null);
         var openMagnify = deps.openMagnify || (typeof global.openMagnify === 'function' ? global.openMagnify : null);
         var view = deps.view || (typeof global.CognitiveNbackView !== 'undefined' ? global.CognitiveNbackView : null);
+        var gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
+        var nbackScreen = deps.nbackScreen || (typeof global.CognitiveNbackScreen !== 'undefined' ? global.CognitiveNbackScreen : null);
 
         if (!sequence || !activityFactory || !view) return null;
 
+        var screenReady = false;
+        if (gameScreen && nbackScreen) {
+            try {
+                gameScreen.createGameScreen(doc, {
+                    gameRoot: doc.getElementById('nbackGame'),
+                    ...nbackScreen.createNbackScreenDefinition()
+                });
+                screenReady = true;
+            } catch (error) {
+                screenReady = false;
+            }
+        }
+        if (!screenReady && doc.getElementById('nbackImageContainer') === null) return null;
+        if (typeof global.syncTopBarCentering === 'function') global.syncTopBarCentering();
         var els = view.createNbackEls(doc);
 
         var state = {
@@ -306,7 +322,9 @@
             keyboard: window.CognitiveKeyboard,
             audio: window.CognitiveAudio,
             openMagnify: window.openMagnify,
-            view: window.CognitiveNbackView
+            view: window.CognitiveNbackView,
+            gameScreen: window.CognitiveGameScreen,
+            nbackScreen: window.CognitiveNbackScreen
         });
     }
 })(typeof window !== 'undefined' ? window : globalThis);
