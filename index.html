@@ -21,6 +21,8 @@
     <link rel="stylesheet" href="css/gng.css" />
     <link rel="stylesheet" href="css/shopping.css" />
     <link rel="stylesheet" href="css/different.css" />
+    <link rel="stylesheet" href="css/game-screen.css" />
+    <link rel="stylesheet" href="css/pairs.css" />
     <link rel="stylesheet" href="css/unified.css" />
     <script src="js/settings.js"></script>
     <script>try{document.documentElement.setAttribute('data-theme',CognitiveSettingsStore.load(CognitiveSettingsStore.keys.theme).theme==='dark'?'dark':'light');}catch(e){}</script>
@@ -196,7 +198,7 @@
             <button class="hamburger-btn" id="hamburgerBtnHome" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
         </div>
         <div class="menu-subtitle">選擇一個遊戲</div>
-            <div class="category-grid game-select menu-grid menu-cols-4 menu-rows-1" id="mainMenuGrid"></div>
+            <div class="category-grid game-select menu-grid menu-cols-5 menu-rows-1" id="mainMenuGrid"></div>
         <div class="menu-footer"></div>
     </div>
 
@@ -599,7 +601,6 @@
                         <option value="3">3</option>
                         <option value="4" selected>4</option>
                         <option value="5">5</option>
-                        <option value="6">6</option>
                     </select>
                 </div>
                 <span class="separator">|</span>
@@ -704,7 +705,6 @@
                     <option value="3" selected>3</option>
                     <option value="4">4</option>
                     <option value="5">5</option>
-                    <option value="6">6</option>
                 </select>
             </div>
             <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
@@ -753,6 +753,12 @@
                 <button id="shoppingStartBtn" style="width:100%; padding:calc(14px * var(--ui-scale)); font-size:calc(28px * var(--ui-scale)); font-weight:700; border:none; border-radius:calc(40px * var(--ui-scale)); background:var(--highlight-correct); color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent; box-shadow:var(--btn-shadow-correct); transition: background 0.2s, transform 0.15s, box-shadow 0.15s;">▶ 開始遊戲</button>
             </div>
     </div>
+
+    <!-- ================================================================
+        Memory pairs screens
+       ================================================================ -->
+    <div class="menu-overlay app-screen settings-screen game-screen hidden" id="pairsSettings"></div>
+    <div class="game-container app-screen game-screen hidden" id="pairsGame"></div>
 
     <!-- ================================================================
         手掌跳飛機
@@ -903,6 +909,11 @@
     <script src="js/food/gng.js"></script>
     <script src="js/food/different-view.js"></script>
     <script src="js/food/different.js"></script>
+    <script src="js/game-screen.js"></script>
+    <script src="js/food/pairs-logic.js"></script>
+    <script src="js/food/pairs-settings.js"></script>
+    <script src="js/food/pairs-view.js"></script>
+    <script src="js/food/pairs.js"></script>
     <script src="js/food/shopping-logic.js"></script>
     <script src="js/food/shopping-view.js"></script>
     <script src="js/food/shopping.js"></script>

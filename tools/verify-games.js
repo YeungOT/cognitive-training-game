@@ -246,6 +246,29 @@ async function main() {
       return cards === 4 && score === '1';
     });
 
+
+    // ---------------- memory pairs ----------------
+    await check('pairs: start -> 8 cards, matching pair scores 1', async () => {
+      await nav('pairsSettings');
+      await delay(300);
+      await clickSel('#pairsStartBtn');
+      await delay(500);
+      await dismiss();
+      await delay(300);
+      const cards = await countSel('#pairsGridContainer .memory-card');
+      await evaluate(`document.querySelector('#pairsGridContainer .memory-card').click()`);
+      await delay(200);
+      await evaluate(`(() => {
+        const cards = Array.from(document.querySelectorAll('#pairsGridContainer .memory-card'));
+        const targetId = cards[0].dataset.pairId;
+        cards.filter(card => card.dataset.pairId === targetId).forEach(card => card.click());
+        return true;
+      })()`);
+      await delay(500);
+      const score = await evaluate(`document.getElementById('pairsScoreNum').textContent`);
+      return cards === 8 && score === '1';
+    });
+
     // ---------------- shopping ----------------
     await check('shopping: settings -> list phase renders 3 cards', async () => {
       await nav('shoppingSettings');

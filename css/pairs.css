@@ -1,0 +1,75 @@
+/* ================================================================
+   配對記憶遊戲專用樣式
+   ================================================================ */
+.dual-grid-cell.memory-card {
+    perspective: calc(800px * var(--ui-scale));
+}
+
+.dual-grid-cell.memory-card .memory-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease;
+}
+
+.dual-grid-cell.memory-card.is-flipped .memory-card-inner,
+.dual-grid-cell.memory-card.is-matched .memory-card-inner,
+.dual-grid.is-preview .memory-card-inner {
+    transform: rotateY(180deg);
+}
+
+.dual-grid.is-preview .memory-card {
+    pointer-events: none;
+    cursor: default;
+}
+
+.dual-grid-cell.memory-card .memory-card-back,
+.dual-grid-cell.memory-card .memory-card-front {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(18px * var(--ui-scale));
+    backface-visibility: hidden;
+    overflow: hidden;
+}
+
+.dual-grid-cell.memory-card .memory-card-back {
+    background: var(--card-bg);
+    color: var(--muted-text);
+    font-size: calc(40px * var(--ui-scale));
+    font-weight: 700;
+}
+
+.dual-grid-cell.memory-card .memory-card-front {
+    background: var(--card-bg);
+    transform: rotateY(180deg);
+}
+
+.dual-grid-cell.memory-card .memory-card-front img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: calc(4px * var(--ui-scale));
+    pointer-events: none;
+}
+
+.dual-grid-cell.memory-card.is-matched {
+    border-color: var(--feedback-correct-border);
+    background: var(--feedback-correct-bg);
+    box-shadow: var(--feedback-correct-glow);
+}
+
+.dual-grid-cell.memory-card.is-wrong {
+    border-color: var(--feedback-wrong-border);
+    background: var(--feedback-wrong-bg);
+    box-shadow: var(--feedback-wrong-glow);
+}
+
+.dual-grid-cell.memory-card .memory-card-fallback {
+    font-size: calc(40px * var(--ui-scale));
+    color: var(--muted-text);
+}
+

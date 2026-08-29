@@ -7,6 +7,7 @@
         sfx: 'cognitiveAppSfx',
         gng: 'cognitiveGngPrefs',
         different: 'cognitiveDifferentPrefs',
+        pairs: 'cognitivePairsPrefs',
         shopping: 'cognitiveShoppingPrefs',
         reality: 'realityOrientationSettings',
         palm: 'cognitivePalmPrefs'
@@ -83,6 +84,14 @@
             default: { imageCount: 4 },
             fields: {
                 imageCount: { type: 'number', enum: [3, 4, 5, 6] }
+            }
+        },
+        cognitivePairsPrefs: {
+            format: 'json',
+            default: { pairCount: 4, previewTime: 'manual' },
+            fields: {
+                pairCount: { type: 'number', enum: [3, 4, 5] },
+                previewTime: { type: 'string', enum: ['5', '10', '15', '20', 'manual'] }
             }
         },
         cognitiveShoppingPrefs: {
