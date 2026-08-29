@@ -32,8 +32,6 @@
 
     function createTopBar(doc, config) {
         assertNonEmptyString(config.backId, 'Top bar backId');
-        assertNonEmptyString(config.titleId, 'Top bar titleId');
-        if (!config.titleChildren) assertNonEmptyString(config.title, 'Top bar title');
         assertNonEmptyString(config.scoreId, 'Top bar scoreId');
         assertNonEmptyString(config.hamburgerId, 'Top bar hamburgerId');
 
@@ -48,8 +46,6 @@
         const title = element(doc, 'span', 'question-text', config.titleId);
         if (config.titleChildren) {
             config.titleChildren.forEach(child => title.appendChild(createConfiguredElement(doc, child, 'span')));
-        } else {
-            title.textContent = config.title;
         }
         questionArea.appendChild(title);
 
@@ -95,15 +91,19 @@
 
     function createTopBarDropdown(doc, dropdown) {
         assertNonEmptyString(dropdown.selectId, 'Top bar dropdown selectId');
-        assertNonEmptyString(dropdown.label, 'Top bar dropdown label');
         if (!Array.isArray(dropdown.options) || dropdown.options.length === 0) {
             throw new Error('Top bar dropdown options must not be empty');
         }
         const wrapper = element(doc, 'div', 'dropdown-wrapper');
-        const label = element(doc, 'label');
-        label.setAttribute('for', dropdown.selectId);
-        label.textContent = dropdown.label;
         const select = element(doc, 'select', '', dropdown.selectId);
+        if (dropdown.label) {
+            const label = element(doc, 'label');
+            label.setAttribute('for', dropdown.selectId);
+            label.textContent = dropdown.label;
+            wrapper.appendChild(label);
+        } else if (dropdown.ariaLabel) {
+            select.setAttribute('aria-label', dropdown.ariaLabel);
+        }
         dropdown.options.forEach(option => {
             const optionNode = element(doc, 'option', '', option.value || '');
             optionNode.value = option.value || '';
@@ -111,7 +111,6 @@
             if (option.selected) optionNode.selected = true;
             select.appendChild(optionNode);
         });
-        wrapper.appendChild(label);
         wrapper.appendChild(select);
         return wrapper;
     }
@@ -143,7 +142,7 @@
             const leftCfg = config.controls.left || {};
             const left = element(doc, 'div', leftCfg.className || 'left-group');
             (leftCfg.children || []).forEach(child => left.appendChild(createConfiguredElement(doc, child)));
-            const center = element(doc, 'div', config.controls.className || 'center-group');
+            const center = element(doc, 'div', config.controls.className || 'center-group', config.controls.id || '');
             (config.controls.children || []).forEach(child => center.appendChild(createConfiguredElement(doc, child)));
             const rightCfg = config.controls.right || {};
             const right = element(doc, 'div', rightCfg.className || 'right-group');
@@ -188,7 +187,7 @@
         if (!Array.isArray(field.options) || field.options.length === 0) {
             throw new Error('Settings field options must not be empty: ' + field.id);
         }
-        const row = element(doc, 'div', 'game-screen-field');
+        const row = element(doc, 'div', 'game-screen-field', field.rowId || '');
         const label = field.labelNode
             ? createConfiguredElement(doc, field.labelNode, 'span')
             : element(doc, 'span', 'game-screen-label');

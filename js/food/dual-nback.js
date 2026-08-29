@@ -27,14 +27,21 @@
         var keyboard = deps.keyboard || (typeof global.CognitiveKeyboard !== 'undefined' ? global.CognitiveKeyboard : null);
         var audio = deps.audio || (typeof global.CognitiveAudio !== 'undefined' ? global.CognitiveAudio : null);
         var hideOverlay = deps.hideOverlay || (typeof global.hideOverlay === 'function' ? global.hideOverlay : null);
+        var gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
+        var dualScreen = deps.dualScreen || (typeof global.CognitiveDualNbackScreen !== 'undefined' ? global.CognitiveDualNbackScreen : null);
 
-        if (!logic || !view || !sequence || !activityFactory) return null;
+        if (!logic || !view || !sequence || !activityFactory || !gameScreen || !dualScreen) return null;
         var FOOD_DATA = foodData.FOOD_DATA;
         var DUAL_SEQ_LEN = logic.DUAL_NBACK_SEQUENCE_LENGTH;
         var DUAL_LABELS = logic.DUAL_MODALITY_LABELS;
         var DUAL_GRIDS = logic.DUAL_POSITION_GRIDS;
         var DUAL_PALETTES = logic.DUAL_COLOR_PALETTES;
 
+        gameScreen.createGameScreen(doc, {
+            gameRoot: doc.getElementById('dualNbackGame'),
+            settingsRoot: doc.getElementById('dualNbackSettings'),
+            ...dualScreen.createDualNbackScreenDefinition()
+        });
         var els = view.createDualNbackEls(doc);
 
         var state = {
@@ -355,7 +362,9 @@
             router: window.CognitiveRouter,
             keyboard: window.CognitiveKeyboard,
             audio: window.CognitiveAudio,
-            hideOverlay: window.hideOverlay
+            hideOverlay: window.hideOverlay,
+            gameScreen: window.CognitiveGameScreen,
+            dualScreen: window.CognitiveDualNbackScreen
         });
     }
 })(typeof window !== 'undefined' ? window : globalThis);

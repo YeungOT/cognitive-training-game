@@ -349,115 +349,10 @@
     </div>
 
     <!-- ================================================================
-        Dual N-back settings
+        Dual N-back game + settings (composed through the shared Game Screen)
        ================================================================ -->
-    <div class="menu-overlay app-screen settings-screen" id="dualNbackSettings">
-        <div class="chrome-btn-left">
-            <button class="back-btn" id="dualNbackSettingsBackBtn" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>
-        </div>
-        <div class="chrome-btn-right">
-            <button class="hamburger-btn" id="hamburgerBtnDualNbackSettings" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
-        </div>
-        <div class="menu-header">
-            <div class="menu-title">⚙️ 設定</div>
-        </div>
-        <div class="menu-subtitle">選擇模態</div>
-        <div class="settings-options" style="width:100%; display:flex; flex-direction:column; padding:calc(10px * var(--ui-scale)) calc(20px * var(--ui-scale));">
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">模態一</span>
-                <select id="dualModality1Select" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="">請選擇</option>
-                    <option value="image">圖片</option>
-                    <option value="position">位置</option>
-                    <option value="color">顏色</option>
-                    <option value="audio">聲音</option>
-                </select>
-            </div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">模態二</span>
-                <select id="dualModality2Select" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="">請選擇</option>
-                    <option value="image">圖片</option>
-                    <option value="position">位置</option>
-                    <option value="color">顏色</option>
-                    <option value="audio">聲音</option>
-                </select>
-            </div>
-            <div id="dualPositionSettings" class="hidden" style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">位置格數</span>
-                <select id="dualPositionGridSelect" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="">請選擇</option>
-                    <option value="2x1">2 x 1</option>
-                    <option value="3x1">3 x 1</option>
-                    <option value="2x2">2 x 2</option>
-                    <option value="3x2">3 x 2</option>
-                    <option value="3x3">3 x 3</option>
-                </select>
-            </div>
-            <div id="dualColorSettings" class="hidden" style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">顏色組合</span>
-                <select id="dualColorPaletteSelect" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="6" selected>6 色</option>
-                    <option value="3">3 色</option>
-                </select>
-            </div>
-        </div>
-            <div class="settings-actions">
-                <button id="dualStartBtn" style="width:100%; padding:calc(14px * var(--ui-scale)); font-size:calc(28px * var(--ui-scale)); font-weight:700; border:none; border-radius:calc(40px * var(--ui-scale)); background:var(--highlight-correct); color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent; box-shadow:var(--btn-shadow-correct); transition: background 0.2s, transform 0.15s, box-shadow 0.15s; opacity:0.45;" disabled>▶ 開始遊戲</button>
-            </div>
-    </div>
-
-    <!-- ================================================================
-        Dual N-back game
-       ================================================================ -->
-    <div class="game-container app-screen" id="dualNbackGame">
-        <div class="top-bar">
-            <div class="left-group">
-                <button class="back-btn" id="dualNbackBackBtn" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>
-            </div>
-            <div class="right-group">
-                <div class="score-display" id="dualNbackScoreDisplay">
-                    得分&nbsp;<span id="dualNbackScoreNum">0</span>
-                </div>
-                <select class="nback-n-select" id="dualNbackNSelect">
-                    <option value="1">N=1</option>
-                    <option value="2">N=2</option>
-                    <option value="3">N=3</option>
-                </select>
-                <span class="separator">|</span>
-                <button class="hamburger-btn" id="hamburgerBtnDualNback" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
-            </div>
-        </div>
-
-        <div class="dual-stage" id="dualNbackStage">
-            <div class="dual-grid hidden" id="dualNbackGrid"></div>
-            <div class="dual-card hidden" id="dualNbackCard">
-                <img id="dualNbackImage" src="" alt="食物" />
-            </div>
-        </div>
-
-        <div class="bottom-controls">
-            <div class="left-group">
-                <div class="speed-control">
-                    <button class="speed-btn" id="dualNbackSpeedDown" title="減慢速度" aria-label="減慢速度">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>
-                    </button>
-                    <span class="speed-display" id="dualNbackSpeedDisplay">5</span>
-                    <button class="speed-btn" id="dualNbackSpeedUp" title="加快速度" aria-label="加快速度">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                    </button>
-                </div>
-                <button class="play-btn" id="dualNbackPlayBtn">
-                    <span class="play-icon">
-                        <span class="triangle"></span>
-                        <span class="pause-bar left"></span>
-                        <span class="pause-bar right"></span>
-                    </span>
-                </button>
-            </div>
-            <div class="center-group dual-match-controls" id="dualNbackMatchButtons"></div>
-        </div>
-    </div>
+    <div class="game-container app-screen game-screen hidden" id="dualNbackGame"></div>
+    <div class="menu-overlay app-screen settings-screen game-screen hidden" id="dualNbackSettings"></div>
 
     <!-- ================================================================
         Go/No Go game + settings (composed through the shared Game Screen)
@@ -625,10 +520,11 @@
     <script src="js/food/nback-audio-map.js"></script>
     <script src="js/food/dual-nback-logic.js"></script>
     <script src="js/food/dual-nback-view.js"></script>
-    <script src="js/food/dual-nback.js"></script>
     <script src="js/food/gng-logic.js"></script>
     <script src="js/food/gng-view.js"></script>
     <script src="js/game-screen.js"></script>
+    <script src="js/food/dual-nback-screen.js"></script>
+    <script src="js/food/dual-nback.js"></script>
     <script src="js/food/gng-screen.js"></script>
     <script src="js/food/gng.js"></script>
     <script src="js/food/food-screen.js"></script>

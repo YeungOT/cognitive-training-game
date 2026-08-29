@@ -355,3 +355,14 @@
         [data-theme="dark"] .gng-controls .go-btn:hover { background: var(--btn-hover-correct); box-shadow: var(--btn-shadow-correct); }
         [data-theme="dark"] .gng-controls .nogo-btn { background: #b71c1c; box-shadow: var(--btn-shadow-wrong); }
         [data-theme="dark"] .gng-controls .nogo-btn:hover { background: var(--btn-hover-wrong); box-shadow: var(--btn-shadow-wrong); }
+
+        /* Enlarged minus/plus glyphs for text-based speed buttons (matches single N-back icon size) */
+        .speed-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(30px * var(--ui-scale));
+            font-weight: 700;
+            line-height: 1;
+            padding: 0;
+        }
