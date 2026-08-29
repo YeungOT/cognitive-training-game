@@ -22,7 +22,11 @@
                     titleId: 'questionText',
                     title: '❓ 選擇食物',
                     scoreId: 'foodScoreNum',
-                    dropdown: field('countSelect', '顯示', ['2', '3', '4'], ['2', '3', '4'], 1),
+                    dropdown: {
+                selectId: 'countSelect',
+                label: '顯示',
+                options: [option('2', '2'), option('3', '3', true), option('4', '4')]
+            },
                     actions: [{
                         id: 'toggleNamesBtn',
                         title: '顯示/隱藏食物名稱',

@@ -105,8 +105,9 @@
             optionNode.value = option.value || '';
             optionNode.textContent = option.label;
             if (option.selected) optionNode.selected = true;
-            wrapper.appendChild(optionNode);
+            select.appendChild(optionNode);
         });
+        wrapper.appendChild(label);
         wrapper.appendChild(select);
         return wrapper;
     }
