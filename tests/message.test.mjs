@@ -32,6 +32,7 @@ function createFakeElement(tag) {
 function createFixture() {
     const overlay = createFakeElement('overlay');
     const msgIcon = createFakeElement('span');
+    const documentFragments = [];
     const msgText = createFakeElement('div');
     const msgSub = createFakeElement('div');
     const msgButtons = createFakeElement('div');
@@ -52,7 +53,17 @@ function createFixture() {
         getMsgText: () => msgText,
         getMsgSub: () => msgSub,
         getMsgButtons: () => msgButtons,
-        createElement: createFakeElement,
+        createElement: (tag) => {
+            const node = createFakeElement(tag);
+            documentFragments.push(node);
+            return node;
+        },
+        createTextNode: (value) => {
+            const node = createFakeElement('textnode');
+            node.textContent = value;
+            documentFragments.push(node);
+            return node;
+        },
         pauseCoordinator,
         attachBackdrop: false
     });
@@ -65,6 +76,7 @@ function createFixture() {
         msgButtons,
         getPauses: () => pauses,
         getResumes: () => resumes,
+        getDocumentFragments: () => documentFragments,
         clickButton(index) {
             const group = msgButtons.children[0];
             const button = group.children[index];
@@ -325,6 +337,44 @@ test('close clears a pending message before the transition callback runs', funct
     assert.equal(fixture.overlay.classList.contains('active'), false);
     assert.equal(fixture.getPauses(), 0);
     assert.equal(fixture.getResumes(), 0);
+});
+
+test('comma-containing text keeps segments unbreakable with wbr after commas', function () {
+    const fixture = createFixture();
+
+    fixture.controller.show({
+        title: 'first segment，second segment，third',
+        pauseTimer: true
+    });
+
+    const textNodes = fixture.msgText.children.filter(node => node.tag === 'textnode');
+    const breaks = fixture.msgText.children.filter(node => node.tag === 'wbr');
+    assert.equal(textNodes.length, 5);
+    assert.equal(textNodes[0].textContent, 'first segment');
+    assert.equal(textNodes[1].textContent, '，');
+    assert.equal(textNodes[2].textContent, 'second segment');
+    assert.equal(textNodes[3].textContent, '，');
+    assert.equal(textNodes[4].textContent, 'third');
+    assert.equal(breaks.length, 2);
+    // each break sits immediately after its comma
+    // structure: [text, comma, wbr, text, comma, wbr, text]
+    const seq = fixture.msgText.children;
+    assert.equal(seq.length, 7);
+    assert.equal(seq[1], textNodes[1]);
+    assert.equal(seq[2], breaks[0]);
+    assert.equal(seq[5], breaks[1]);
+});
+
+test('text without commas stays as plain textContent', function () {
+    const fixture = createFixture();
+
+    fixture.controller.show({
+        title: 'no commas here',
+        pauseTimer: true
+    });
+
+    assert.equal(fixture.msgText.textContent, 'no commas here');
+    assert.equal(fixture.msgText.children.length, 0);
 });
 
 test('dismiss runs the current message callback and resumes paused activity', function () {

@@ -638,7 +638,7 @@
         }
 
         .message-box {
-            width: min(88vw, calc(760px * var(--ui-scale)));
+            width: fit-content;
             min-width: 0;
             max-width: 92vw;
             padding-right: calc(24px * var(--ui-scale));

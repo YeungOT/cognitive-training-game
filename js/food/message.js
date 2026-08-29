@@ -33,11 +33,36 @@
             if (typeof document === 'undefined') return null;
             return document.createElement(tag);
         };
+        var createTextNode = adapters.createTextNode || function (value) {
+            if (typeof document === 'undefined') return null;
+            return document.createTextNode(value);
+        };
 
         var currentFlow = null;
         var pendingOptions = null;
         var pendingDrainQueued = false;
         var lastBackdropDismissAt = 0;
+
+        // Instruction text wraps at commas only: each comma-separated
+        // segment stays unbreakable so a line always ends with a comma.
+        function appendWrappableText(target, value) {
+            var text = String(value);
+            if (text.indexOf('，') === -1 && text.indexOf(',') === -1) {
+                target.textContent = text;
+                return;
+            }
+            var segments = text.split(/([，,])/);
+            target.textContent = '';
+            segments.forEach(function (segment) {
+                if (segment === '') return;
+                if (createTextNode) target.appendChild(createTextNode(segment));
+                if (segment === '，' || segment === ',') {
+                    var breakOpportunity = createElement('wbr');
+                    if (breakOpportunity) target.appendChild(breakOpportunity);
+                }
+            });
+        }
+
 
         function render(options) {
             var icon = getMsgIcon();
@@ -54,7 +79,7 @@
                 if (options.titleHtml) {
                     text.innerHTML = options.title || '';
                 } else {
-                    text.textContent = options.title || '';
+                    appendWrappableText(text, options.title || '');
                 }
                 text.className = 'msg-text' +
                     (options.isVictory ? ' victory' : '') +
@@ -62,7 +87,7 @@
                     (options.textClass ? ' ' + options.textClass : '');
             }
             if (sub) {
-                sub.textContent = options.subtitle || '';
+                appendWrappableText(sub, options.subtitle || '');
                 sub.classList.toggle('hidden', !options.subtitle);
             }
             if (buttonHost) {
