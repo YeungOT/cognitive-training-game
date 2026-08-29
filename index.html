@@ -460,125 +460,11 @@
     </div>
 
     <!-- ================================================================
-        Go/No Go game
+        Go/No Go game + settings (composed through the shared Game Screen)
        ================================================================ -->
-    <div class="game-container app-screen" id="gngGame">
-        <div class="top-bar">
-            <div class="left-group">
-                <button class="back-btn" id="gngBackBtn" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>
-            </div>
-            <div class="question-area">
-                <span class="gng-rules-text" id="gngRuleText">
-                    ✅ <span class="go-highlight" id="gngGoLabel">水果</span> → ❌ <span class="nogo-highlight" id="gngNoGoLabel">蔬菜</span>
-                </span>
-            </div>
-            <div class="right-group">
-                <div class="score-display" id="gngScoreDisplay">
-                    得分&nbsp;<span id="gngScoreNum">0</span>
-                </div>
-                <button class="hamburger-btn" id="hamburgerBtnGng" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
-            </div>
-        </div>
+    <div class="game-container app-screen game-screen hidden" id="gngGame"></div>
+    <div class="menu-overlay app-screen settings-screen game-screen hidden" id="gngSettings"></div>
 
-        <div class="gng-grid-wrapper" id="gngGridWrapper">
-            <div class="gng-grid-container cols-2" id="gngGridContainer"></div>
-        </div>
-
-        <div class="bottom-controls">
-            <div class="left-group">
-                <div class="speed-control">
-                    <button class="speed-btn" id="gngSpeedDown" title="減慢速度" aria-label="減慢速度">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>
-                    </button>
-                    <span class="speed-display" id="gngSpeedDisplay">5</span>
-                    <button class="speed-btn" id="gngSpeedUp" title="加快速度" aria-label="加快速度">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                    </button>
-                </div>
-                <button class="play-btn" id="gngPlayBtn">
-                    <span class="play-icon">
-                        <span class="triangle"></span>
-                        <span class="pause-bar left"></span>
-                        <span class="pause-bar right"></span>
-                    </span>
-                </button>
-            </div>
-            <div class="center-group gng-controls">
-                <button class="go-btn" id="gngGoBtn">✅</button>
-                <button class="nogo-btn" id="gngNoGoBtn">❌</button>
-            </div>
-            <div class="right-group"></div>
-        </div>
-    </div>
-
-    <!-- ================================================================
-        Go/No Go settings
-       ================================================================ -->
-    <div class="menu-overlay app-screen settings-screen" id="gngSettings">
-        <div class="chrome-btn-left">
-            <button class="back-btn" id="gngSettingsBackBtn" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>
-        </div>
-        <div class="chrome-btn-right chrome-btn-cluster">
-            <button class="save-btn" id="gngSaveSettingsBtn" title="儲存設定">💾儲存</button>
-            <button class="hamburger-btn" id="hamburgerBtnGngSettings" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
-        </div>
-        <div class="menu-header">
-            <div class="menu-title">⚙️ 設定</div>
-        </div>
-        <div class="menu-subtitle">設定任務規則與切換條件</div>
-        <div class="settings-options" style="width:100%; display:flex; flex-direction:column; padding:calc(10px * var(--ui-scale)) calc(20px * var(--ui-scale));">
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">✅ Go 類別</span>
-                <select id="gngGoCategory" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="全部">其他</option>
-                    <option value="水果">水果</option>
-                    <option value="蔬菜">蔬菜</option>
-                    <option value="肉類">肉類</option>
-                    <option value="點心">點心</option>
-                    <option value="堅果">堅果</option>
-                    <option value="甜品">甜品</option>
-                    <option value="海鮮">海鮮</option>
-                </select>
-            </div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">❌ No Go 類別</span>
-                <select id="gngNoGoCategory" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="全部">其他</option>
-                    <option value="水果">水果</option>
-                    <option value="蔬菜">蔬菜</option>
-                    <option value="肉類">肉類</option>
-                    <option value="點心">點心</option>
-                    <option value="堅果">堅果</option>
-                    <option value="甜品">甜品</option>
-                    <option value="海鮮">海鮮</option>
-                </select>
-            </div>
-            <div class="separator" style="width:100%; border-top:calc(2px * var(--ui-scale)) solid var(--border-color);"></div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">🔄 自動切換</span>
-                <button id="gngAutoToggle" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(24px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color); cursor:pointer; -webkit-tap-highlight-color:transparent; transition: background 0.3s;">關閉</button>
-            </div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">切換類型</span>
-                <select id="gngSwitchType" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="random">隨機變更兩者</option>
-                    <option value="swap" selected>互換</option>
-                </select>
-            </div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">切換頻率</span>
-                <select id="gngSwitchFreq" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="5">5 張</option>
-                    <option value="10" selected>10 張</option>
-                    <option value="15">15 張</option>
-                    <option value="20">20 張</option>
-                </select>
-            </div>
-        </div>
-            <div class="settings-actions">
-                <button id="gngStartBtn" style="width:100%; padding:calc(14px * var(--ui-scale)); font-size:calc(28px * var(--ui-scale)); font-weight:700; border:none; border-radius:calc(40px * var(--ui-scale)); background:var(--highlight-correct); color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent; box-shadow:var(--btn-shadow-correct); transition: background 0.2s, transform 0.15s, box-shadow 0.15s;">▶ 開始遊戲</button>
-            </div>
-    </div>
 
     <!-- ================================================================
         找不同 game
@@ -742,8 +628,9 @@
     <script src="js/food/dual-nback.js"></script>
     <script src="js/food/gng-logic.js"></script>
     <script src="js/food/gng-view.js"></script>
-    <script src="js/food/gng.js"></script>
     <script src="js/game-screen.js"></script>
+    <script src="js/food/gng-screen.js"></script>
+    <script src="js/food/gng.js"></script>
     <script src="js/food/food-screen.js"></script>
     <script src="js/food/food.js"></script>
     <script src="js/food/different-view.js"></script>

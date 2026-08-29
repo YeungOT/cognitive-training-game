@@ -33,7 +33,7 @@
     function createTopBar(doc, config) {
         assertNonEmptyString(config.backId, 'Top bar backId');
         assertNonEmptyString(config.titleId, 'Top bar titleId');
-        assertNonEmptyString(config.title, 'Top bar title');
+        if (!config.titleChildren) assertNonEmptyString(config.title, 'Top bar title');
         assertNonEmptyString(config.scoreId, 'Top bar scoreId');
         assertNonEmptyString(config.hamburgerId, 'Top bar hamburgerId');
 
@@ -46,7 +46,11 @@
 
         const questionArea = element(doc, 'div', 'question-area');
         const title = element(doc, 'span', 'question-text', config.titleId);
-        title.textContent = config.title;
+        if (config.titleChildren) {
+            config.titleChildren.forEach(child => title.appendChild(createConfiguredElement(doc, child, 'span')));
+        } else {
+            title.textContent = config.title;
+        }
         questionArea.appendChild(title);
 
         const right = element(doc, 'div', 'right-group');
@@ -136,12 +140,17 @@
     function createFooter(doc, config) {
         const footer = element(doc, 'div', config.className || 'footer');
         if (config.controls) {
-            const left = element(doc, 'div', 'left-group');
+            const leftCfg = config.controls.left || {};
+            const left = element(doc, 'div', leftCfg.className || 'left-group');
+            (leftCfg.children || []).forEach(child => left.appendChild(createConfiguredElement(doc, child)));
             const center = element(doc, 'div', config.controls.className || 'center-group');
             (config.controls.children || []).forEach(child => center.appendChild(createConfiguredElement(doc, child)));
+            const rightCfg = config.controls.right || {};
+            const right = element(doc, 'div', rightCfg.className || 'right-group');
+            (rightCfg.children || []).forEach(child => right.appendChild(createConfiguredElement(doc, child)));
             footer.appendChild(left);
             footer.appendChild(center);
-            footer.appendChild(element(doc, 'div', 'right-group'));
+            footer.appendChild(right);
             return footer;
         }
 
@@ -159,6 +168,19 @@
 
     function createSelectField(doc, field) {
         if (field.separator) return element(doc, 'div', 'separator game-screen-separator');
+        if (field.button) {
+            assertNonEmptyString(field.label, 'Settings field label');
+            assertNonEmptyString(field.button.id, 'Settings field button id');
+            const row = element(doc, 'div', 'game-screen-field');
+            const label = element(doc, 'span', 'game-screen-label');
+            label.textContent = field.label;
+            const button = element(doc, 'button', field.button.className || 'game-screen-toggle', field.button.id);
+            if (field.button.title) button.title = field.button.title;
+            button.textContent = field.button.text || '關閉';
+            row.appendChild(label);
+            row.appendChild(button);
+            return row;
+        }
         assertNonEmptyString(field.id, 'Settings field id');
         if (!field.labelNode) {
             assertNonEmptyString(field.label, 'Settings field label');

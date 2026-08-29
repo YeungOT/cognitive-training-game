@@ -27,13 +27,20 @@
         var audio = deps.audio || (typeof global.CognitiveAudio !== 'undefined' ? global.CognitiveAudio : null);
         var openMagnify = deps.openMagnify || (typeof global.openMagnify === 'function' ? global.openMagnify : null);
         var syncTopBarCentering = deps.syncTopBarCentering || (typeof global.syncTopBarCentering === 'function' ? global.syncTopBarCentering : null);
+        var gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
+        var gngScreen = deps.gngScreen || (typeof global.CognitiveGngScreen !== 'undefined' ? global.CognitiveGngScreen : null);
 
-        if (!logic || !view || !activityFactory) return null;
+        if (!logic || !view || !activityFactory || !gameScreen || !gngScreen) return null;
         var FOOD_DATA = foodData.FOOD_DATA;
         var CATEGORY_NAMES = foodData.CATEGORY_NAMES;
         var pickRandom = foodData.pickRandom;
         var getFoodId = foodData.getFoodId;
 
+        gameScreen.createGameScreen(doc, {
+            gameRoot: doc.getElementById('gngGame'),
+            settingsRoot: doc.getElementById('gngSettings'),
+            ...gngScreen.createGngScreenDefinition()
+        });
         var els = view.createGngEls(doc);
 
         var state = {
@@ -327,6 +334,7 @@
                     router.afterTransition(function () {
                         if (syncTopBarCentering) syncTopBarCentering();
                         startGng();
+                        showGngIntro();
                     });
                 }
             } else {
@@ -334,6 +342,7 @@
                 doc.getElementById('gngGame').style.display = 'flex';
                 if (syncTopBarCentering) syncTopBarCentering();
                 startGng();
+                showGngIntro();
             }
         }
 
@@ -517,6 +526,8 @@
                 return api.mount(document, {
                     foodData: window.CognitiveFoodData,
                     logic: window.CognitiveGngLogic,
+                    gameScreen: window.CognitiveGameScreen,
+                    gngScreen: window.CognitiveGngScreen,
                     view: window.CognitiveGngView,
                     prefs: window.CognitivePrefs,
                     activity: window.CognitiveActivity,

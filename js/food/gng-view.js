@@ -100,7 +100,7 @@
         const noGoDisplay = noGoCat === '全部' ? '其他' : noGoCat;
         message.show({
             title: `任務已變更：✅ ${goDisplay} → ❌ ${noGoDisplay}`,
-            subtitle: '請繼續作答！',
+            subtitle: '',
             pauseTimer: true
         });
     }
