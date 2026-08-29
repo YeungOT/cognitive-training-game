@@ -58,29 +58,8 @@
             score.appendChild(scoreNum);
             right.appendChild(score);
         }
+        if (config.dropdown) right.appendChild(createTopBarDropdown(doc, config.dropdown));
         (config.actions || []).forEach(action => right.appendChild(createTopBarAction(doc, action)));
-        if (config.dropdown) {
-            assertNonEmptyString(config.dropdown.selectId, 'Top bar dropdown selectId');
-            assertNonEmptyString(config.dropdown.label, 'Top bar dropdown label');
-            if (!Array.isArray(config.dropdown.options) || config.dropdown.options.length === 0) {
-                throw new Error('Top bar dropdown options must not be empty');
-            }
-            const wrapper = element(doc, 'div', 'dropdown-wrapper');
-            const label = element(doc, 'label');
-            label.setAttribute('for', config.dropdown.selectId);
-            label.textContent = config.dropdown.label;
-            const select = element(doc, 'select', '', config.dropdown.selectId);
-            config.dropdown.options.forEach(option => {
-                const optionElement = element(doc, 'option', '', option.value || '');
-                optionElement.value = option.value || '';
-                optionElement.textContent = option.label;
-                if (option.selected) optionElement.selected = true;
-                select.appendChild(optionElement);
-            });
-            wrapper.appendChild(label);
-            wrapper.appendChild(select);
-            right.appendChild(wrapper);
-        }
         const separator = element(doc, 'span', 'separator');
         separator.textContent = '|';
         right.appendChild(separator);
@@ -108,6 +87,28 @@
         button.title = config.title || '儲存設定';
         button.textContent = config.label || '💾儲存';
         return button;
+    }
+
+    function createTopBarDropdown(doc, dropdown) {
+        assertNonEmptyString(dropdown.selectId, 'Top bar dropdown selectId');
+        assertNonEmptyString(dropdown.label, 'Top bar dropdown label');
+        if (!Array.isArray(dropdown.options) || dropdown.options.length === 0) {
+            throw new Error('Top bar dropdown options must not be empty');
+        }
+        const wrapper = element(doc, 'div', 'dropdown-wrapper');
+        const label = element(doc, 'label');
+        label.setAttribute('for', dropdown.selectId);
+        label.textContent = dropdown.label;
+        const select = element(doc, 'select', '', dropdown.selectId);
+        dropdown.options.forEach(option => {
+            const optionNode = element(doc, 'option', '', option.value || '');
+            optionNode.value = option.value || '';
+            optionNode.textContent = option.label;
+            if (option.selected) optionNode.selected = true;
+            wrapper.appendChild(optionNode);
+        });
+        wrapper.appendChild(select);
+        return wrapper;
     }
 
     function createTopBarAction(doc, action) {

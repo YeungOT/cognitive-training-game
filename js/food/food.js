@@ -14,7 +14,6 @@
         if (!foodData) return null;
         var logic = deps.logic || (typeof global.CognitiveFoodLogic !== 'undefined' ? global.CognitiveFoodLogic : null);
         var view = deps.view || (typeof global.CognitiveFoodView !== 'undefined' ? global.CognitiveFoodView : null);
-        if (!logic || !view) return null;
 
         var FOOD_DATA = foodData.FOOD_DATA;
         var CATEGORY_NAMES = foodData.CATEGORY_NAMES;
@@ -36,7 +35,15 @@
         var openMagnify = deps.openMagnify || (typeof global.openMagnify === 'function' ? global.openMagnify : null);
         var syncTopBarCentering = deps.syncTopBarCentering || (typeof global.syncTopBarCentering === 'function' ? global.syncTopBarCentering : null);
         var hideOverlay = deps.hideOverlay || (typeof global.hideOverlay === 'function' ? global.hideOverlay : null);
+        var gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
+        var foodScreen = deps.foodScreen || (typeof global.CognitiveFoodScreen !== 'undefined' ? global.CognitiveFoodScreen : null);
 
+        if (!logic || !view || !gameScreen || !foodScreen) return null;
+
+        gameScreen.createGameScreen(doc, {
+            gameRoot: doc.getElementById('foodGame'),
+            ...foodScreen.createFoodScreenDefinition()
+        });
         var els = view.createFoodEls(doc);
 
         var state = {
@@ -294,6 +301,8 @@
                     logic: window.CognitiveFoodLogic,
                     view: window.CognitiveFoodView,
                     nameVisibility: window.CognitiveNameVisibility ? window.CognitiveNameVisibility.shared : null,
+                    gameScreen: window.CognitiveGameScreen,
+                    foodScreen: window.CognitiveFoodScreen,
                     message: window.CognitiveMessage,
                     feedback: window.CognitiveFeedback,
                     router: window.CognitiveRouter,
