@@ -42,6 +42,16 @@
             );
             --card: var(--grid-card);
         }
+.grid-container,
+.gng-grid-container,
+.shopping-list-grid,
+.shopping-recall-grid,
+.dual-grid {
+    justify-content: center;
+    align-content: center;
+    width: auto;
+}
+
         /* 單張或兩張卡片時預留底部陰影空間，避免被遊戲舞台裁走。 */
         .gng-grid-container.cols-1,
         .gng-grid-container.cols-2,

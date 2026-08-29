@@ -41,20 +41,16 @@
 
         .shopping-list-grid {
             display: grid;
-            gap: var(--grid-gap-h) var(--grid-gap-v);
-            justify-content: space-between;
+            row-gap: var(--grid-gap-v);
+
+            column-gap: var(--grid-gap-h);
+            justify-content: center;
             align-items: stretch;
             align-content: center;
-            width: 100%;
-            --name-track: calc(44px * var(--ui-scale));
-            --row-name-track: var(--name-track);
-            --name-shift: calc(-1 * var(--grid-rows) * (var(--name-track) - var(--row-name-track)) / 2);
-            --grid-name-track: var(--name-track);
-            grid-template-columns: repeat(var(--grid-cols), var(--card));
-            grid-template-rows: repeat(var(--grid-rows), calc(var(--card) + var(--row-name-track)));
-            transform: translateY(var(--name-shift));
-            transition: grid-template-columns 0.35s ease, grid-template-rows 0.35s ease, transform 0.35s ease;
+            width: auto;
         }
+
+
         .shopping-list-grid.count-2 { --grid-cols: 2; --grid-rows: 1; --grid-gap-h: var(--grid-gap-2); --grid-gap-v: calc(0px * var(--ui-scale)); }
         .shopping-list-grid.count-3 { --grid-cols: 3; --grid-rows: 1; --grid-gap-h: var(--grid-gap-3); --grid-gap-v: calc(0px * var(--ui-scale)); }
         .shopping-list-grid.count-4 { --grid-cols: 4; --grid-rows: 1; --grid-gap-h: var(--grid-gap-4); --grid-gap-v: calc(0px * var(--ui-scale)); }
@@ -72,7 +68,7 @@
         .shopping-list-grid.count-5 .shopping-list-row {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             gap: var(--grid-gap-h);
             min-width: 0;
             max-width: 100%;
@@ -352,11 +348,13 @@
         }
         .shopping-recall-grid {
             display: grid;
-            gap: var(--grid-gap-h) var(--grid-gap-v);
+            row-gap: var(--grid-gap-v);
+
+            column-gap: var(--grid-gap-h);
             justify-content: center;
             align-items: stretch;
             align-content: center;
-            width: 100%;
+            width: auto;
             height: 100%;
             max-height: 100%;
         }
@@ -488,7 +486,9 @@
 
         /* 底部狀態 */
         .shopping-controls {
-            gap: var(--grid-gap-h) var(--grid-gap-v);
+            row-gap: var(--grid-gap-v);
+
+            column-gap: var(--grid-gap-h);
             flex-wrap: wrap;
         }
         .shopping-progress {

@@ -58,6 +58,28 @@
             score.appendChild(scoreNum);
             right.appendChild(score);
         }
+        if (config.dropdown) {
+            assertNonEmptyString(config.dropdown.selectId, 'Top bar dropdown selectId');
+            assertNonEmptyString(config.dropdown.label, 'Top bar dropdown label');
+            if (!Array.isArray(config.dropdown.options) || config.dropdown.options.length === 0) {
+                throw new Error('Top bar dropdown options must not be empty');
+            }
+            const wrapper = element(doc, 'div', 'dropdown-wrapper');
+            const label = element(doc, 'label');
+            label.setAttribute('for', config.dropdown.selectId);
+            label.textContent = config.dropdown.label;
+            const select = element(doc, 'select', '', config.dropdown.selectId);
+            config.dropdown.options.forEach(option => {
+                const optionElement = element(doc, 'option', '', option.value || '');
+                optionElement.value = option.value || '';
+                optionElement.textContent = option.label;
+                if (option.selected) optionElement.selected = true;
+                select.appendChild(optionElement);
+            });
+            wrapper.appendChild(label);
+            wrapper.appendChild(select);
+            right.appendChild(wrapper);
+        }
         const separator = element(doc, 'span', 'separator');
         separator.textContent = '|';
         right.appendChild(separator);
@@ -183,8 +205,6 @@
         if (!definition || typeof definition !== 'object') throw new Error('Game Screen definition must be an object');
         if (!definition.gameRoot) throw new Error('Game Screen gameRoot is required');
         if (!definition.game) throw new Error('Game Screen game config is required');
-        if (!definition.settingsRoot) throw new Error('Game Screen settingsRoot is required');
-        if (!definition.settings) throw new Error('Game Screen settings config is required');
 
         const gameRoot = definition.gameRoot;
         gameRoot.className = 'game-container app-screen game-screen hidden';
@@ -193,15 +213,18 @@
         gameRoot.appendChild(createStage(doc, definition.game.stage));
         gameRoot.appendChild(createFooter(doc, definition.game.footer));
 
-        const settingsRoot = definition.settingsRoot;
-        settingsRoot.className = 'menu-overlay app-screen settings-screen game-screen hidden';
-        settingsRoot.textContent = '';
-        fillSettingsScreen(doc, settingsRoot, definition.settings);
+        let settingsRoot = null;
+        if (definition.settingsRoot && definition.settings) {
+            settingsRoot = definition.settingsRoot;
+            settingsRoot.className = 'menu-overlay app-screen settings-screen game-screen hidden';
+            settingsRoot.textContent = '';
+            fillSettingsScreen(doc, settingsRoot, definition.settings);
+        }
 
         return {
             game: gameRoot,
             settings: settingsRoot,
-            els: collectElements([gameRoot, settingsRoot])
+            els: collectElements([gameRoot, settingsRoot].filter(Boolean))
         };
     }
 
@@ -214,4 +237,3 @@
         window.CognitiveGameScreen = api;
     }
 })(typeof window !== 'undefined' ? window : globalThis);
-

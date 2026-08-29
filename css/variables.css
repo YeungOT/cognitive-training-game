@@ -42,10 +42,10 @@
             --screen-gap-md: calc(24px * var(--ui-scale));
             --screen-pad-y: clamp(12px, 4vh, 28px);
             --grid-gap-2: calc(18px * var(--ui-scale));
-            --grid-gap-3: calc(24px * var(--ui-scale));
-            --grid-gap-4: calc(28px * var(--ui-scale));
-            --grid-gap-5: calc(24px * var(--ui-scale));
-            --grid-gap-6: calc(24px * var(--ui-scale));
+            --grid-gap-3: calc(18px * var(--ui-scale));
+            --grid-gap-4: calc(18px * var(--ui-scale));
+            --grid-gap-5: calc(18px * var(--ui-scale));
+            --grid-gap-6: calc(18px * var(--ui-scale));
             --bg-color: #f5f0e8;
             --container-bg: #f5f0e8;
             --card-bg: #ffffff;

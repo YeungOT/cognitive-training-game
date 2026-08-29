@@ -13,11 +13,13 @@
 }
 .different-grid-container {
     display: grid;
-    gap: var(--grid-gap-h) var(--grid-gap-v);
-    justify-content: space-between;
+    row-gap: var(--grid-gap-v);
+
+    column-gap: var(--grid-gap-h);
+    justify-content: center;
     align-items: center;
     align-content: center;
-    width: 100%;
+    width: auto;
     height: 100%;
     max-height: 100%;
 }
@@ -106,7 +108,7 @@
 .different-grid-container.count-5 .different-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: var(--grid-gap-h);
     max-width: 100%;
 }

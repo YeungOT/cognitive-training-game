@@ -583,40 +583,7 @@
     <!-- ================================================================
         找不同 game
        ================================================================ -->
-    <div class="game-container app-screen" id="differentGame">
-        <div class="top-bar">
-            <div class="left-group">
-                <button class="back-btn" id="differentBackBtn" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>
-            </div>
-            <div class="question-area">
-                <span class="question-text" id="differentQuestionText">🔍 找不同</span>
-            </div>
-            <div class="right-group">
-                <div class="score-display" id="differentScoreDisplay">
-                    得分&nbsp;<span id="differentScoreNum">0</span>
-                </div>
-                <div class="dropdown-wrapper">
-                    <label for="differentCountSelect">顯示</label>
-                    <select id="differentCountSelect">
-                        <option value="3">3</option>
-                        <option value="4" selected>4</option>
-                        <option value="5">5</option>
-                    </select>
-                </div>
-                <span class="separator">|</span>
-                <button class="hamburger-btn" id="hamburgerBtnDifferent" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
-            </div>
-        </div>
-
-        <div class="different-grid-wrapper" id="differentGridWrapper">
-            <div class="different-grid-container count-4" id="differentGridContainer"></div>
-        </div>
-
-        <div class="footer">
-            <span class="hint">🔍 找出與其他食物不同的一張</span>
-            <span class="round-info" id="differentRoundInfo">第 1 題</span>
-        </div>
-    </div>
+    <div class="game-container app-screen game-screen hidden" id="differentGame"></div>
 
     <!-- ================================================================
         Shopping memory game
@@ -907,9 +874,9 @@
     <script src="js/food/gng-logic.js"></script>
     <script src="js/food/gng-view.js"></script>
     <script src="js/food/gng.js"></script>
+    <script src="js/game-screen.js"></script>
     <script src="js/food/different-view.js"></script>
     <script src="js/food/different.js"></script>
-    <script src="js/game-screen.js"></script>
     <script src="js/food/pairs-logic.js"></script>
     <script src="js/food/pairs-settings.js"></script>
     <script src="js/food/pairs-view.js"></script>

@@ -1,14 +1,6 @@
 (function (global) {
     'use strict';
 
-    // =============================================================
-    // 找不同遊戲
-    // =============================================================
-    //
-    // Pure, DOM-free helpers are declared at module scope so they can be
-    // unit-tested directly. The impure game lifecycle (DOM, timers, events)
-    // lives in mount(root, deps), which the browser invokes once on load.
-
     function buildDifferentRound(imageCount, foodData, categoryNames, shuffle, pickRandom) {
         var count = imageCount;
         for (var attempt = 0; attempt < 50; attempt++) {
@@ -48,39 +40,69 @@
 
     function mount(root, deps) {
         deps = deps || {};
-        var doc = (root && root.ownerDocument) || root || (typeof document !== 'undefined' ? document : null);
+        const doc = (root && root.ownerDocument) || root || (typeof document !== 'undefined' ? document : null);
         if (!doc) return null;
 
-        var foodData = deps.foodData || (typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null);
+        const foodData = deps.foodData || (typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null);
         if (!foodData) return null;
-        var FOOD_DATA = foodData.FOOD_DATA;
-        var CATEGORY_NAMES = foodData.CATEGORY_NAMES;
-        var shuffle = foodData.shuffle;
-        var pickRandom = foodData.pickRandom;
+        const FOOD_DATA = foodData.FOOD_DATA;
+        const CATEGORY_NAMES = foodData.CATEGORY_NAMES;
+        const shuffle = foodData.shuffle;
+        const pickRandom = foodData.pickRandom;
 
-        var prefs = deps.prefs || (typeof global.CognitivePrefs !== 'undefined' ? global.CognitivePrefs : null);
-        var message = deps.message || (typeof global.CognitiveMessage !== 'undefined' ? global.CognitiveMessage : null);
-        var feedback = deps.feedback || (typeof global.CognitiveFeedback !== 'undefined' ? global.CognitiveFeedback : null);
-        var router = deps.router || (typeof global.CognitiveRouter !== 'undefined' ? global.CognitiveRouter : null);
-        var audio = deps.audio || (typeof global.CognitiveAudio !== 'undefined' ? global.CognitiveAudio : null);
-        var openMagnify = deps.openMagnify || (typeof global.openMagnify === 'function' ? global.openMagnify : null);
-        var hideOverlay = deps.hideOverlay || (typeof global.hideOverlay === 'function' ? global.hideOverlay : null);
-        var syncTopBarCentering = deps.syncTopBarCentering || (typeof global.syncTopBarCentering === 'function' ? global.syncTopBarCentering : null);
-        var view = deps.view || (typeof global.CognitiveDifferentView !== 'undefined' ? global.CognitiveDifferentView : null);
-        if (!view) return null;
+        const prefs = deps.prefs || (typeof global.CognitivePrefs !== 'undefined' ? global.CognitivePrefs : null);
+        const message = deps.message || (typeof global.CognitiveMessage !== 'undefined' ? global.CognitiveMessage : null);
+        const feedback = deps.feedback || (typeof global.CognitiveFeedback !== 'undefined' ? global.CognitiveFeedback : null);
+        const router = deps.router || (typeof global.CognitiveRouter !== 'undefined' ? global.CognitiveRouter : null);
+        const audio = deps.audio || (typeof global.CognitiveAudio !== 'undefined' ? global.CognitiveAudio : null);
+        const openMagnify = deps.openMagnify || (typeof global.openMagnify === 'function' ? global.openMagnify : null);
+        const hideOverlay = deps.hideOverlay || (typeof global.hideOverlay === 'function' ? global.hideOverlay : null);
+        const syncTopBarCentering = deps.syncTopBarCentering || (typeof global.syncTopBarCentering === 'function' ? global.syncTopBarCentering : null);
+        const view = deps.view || (typeof global.CognitiveDifferentView !== 'undefined' ? global.CognitiveDifferentView : null);
+        const gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
+        if (!view || !gameScreen) return null;
 
-        var $ = function (id) { return doc.getElementById(id); };
-        var els = {
-            game: $('differentGame'),
-            gridWrapper: $('differentGridWrapper'),
-            gridContainer: $('differentGridContainer'),
-            scoreNum: $('differentScoreNum'),
-            roundInfo: $('differentRoundInfo'),
-            backBtn: $('differentBackBtn'),
-            countSelect: $('differentCountSelect')
-        };
+        const screen = gameScreen.createGameScreen(doc, {
+            gameRoot: doc.getElementById('differentGame'),
+            game: {
+                topBar: {
+                    backId: 'differentBackBtn',
+                    titleId: 'differentQuestionText',
+                    title: '🔍 找不同',
+                    scoreId: 'differentScoreNum',
+                    dropdown: {
+                        selectId: 'differentCountSelect',
+                        label: '顯示',
+                        options: [
+                            { value: '3', label: '3' },
+                            { value: '4', label: '4', selected: true },
+                            { value: '5', label: '5' }
+                        ]
+                    },
+                    hamburgerId: 'hamburgerBtnDifferent'
+                },
+                stage: {
+                    id: 'differentGridWrapper',
+                    className: 'different-grid-wrapper',
+                    child: {
+                        id: 'differentGridContainer',
+                        className: 'different-grid-container count-4'
+                    }
+                },
+                footer: {
+                    hint: '🔍 找出與其他食物不同的一張',
+                    roundId: 'differentRoundInfo',
+                    roundText: '第 1 題'
+                }
+            }
+        });
 
-        var state = {
+        const els = screen.els;
+        if (!els.differentGame || !els.differentGridWrapper || !els.differentGridContainer ||
+            !els.differentScoreNum || !els.differentRoundInfo || !els.differentBackBtn ||
+            !els.differentCountSelect) return null;
+
+        const state = {
             imageCount: 4,
             score: 0,
             round: 0,
@@ -92,20 +114,19 @@
             advanceTimer: null
         };
 
-        var differentPreferences = prefs ? prefs.load('cognitiveDifferentPrefs') : null;
+        const differentPreferences = prefs ? prefs.load('cognitiveDifferentPrefs') : null;
         if (differentPreferences) {
             state.imageCount = differentPreferences.imageCount;
-            els.countSelect.value = String(state.imageCount);
+            els.differentCountSelect.value = String(state.imageCount);
         }
 
-        var controller = new AbortController();
-        var listenOpts = { signal: controller.signal };
-
+        const controller = new AbortController();
+        const listenOpts = { signal: controller.signal };
 
         function handleDifferentCardClick(index) {
             if (state.isAnswered || state.isWaitingForNext) return;
             const item = state.items[index];
-            const card = els.gridContainer.querySelector(`.different-card[data-index="${index}"]`);
+            const card = els.differentGridContainer.querySelector(`.different-card[data-index="${index}"]`);
             if (!item || !card) return;
 
             if (item.isCorrect) {
@@ -114,28 +135,29 @@
                 state.score++;
                 updateDifferentScore();
                 card.classList.add('feedback-correct');
-                Array.from(els.gridContainer.querySelectorAll('.different-card')).forEach(child => child.classList.add('disabled'));
+                Array.from(els.differentGridContainer.querySelectorAll('.different-card')).forEach(child => child.classList.add('disabled'));
                 audio.play('correct');
-                feedback.show(els.gridWrapper, '✅ 正確！', 'correct');
+                feedback.show(els.differentGridWrapper, '✅ 正確！', 'correct');
                 clearTimeout(state.advanceTimer);
                 state.advanceTimer = setTimeout(nextDifferentRound, 650);
-            } else {
-                audio.play('wrong');
-                card.classList.add('feedback-wrong');
-                feedback.show(els.gridWrapper, '❌ 再試一次！', 'wrong');
-                clearTimeout(state.wrongFlashTimer);
-                state.wrongFlashTimer = setTimeout(function () {
-                    card.classList.remove('feedback-wrong');
-                }, 600);
+                return;
             }
+
+            audio.play('wrong');
+            card.classList.add('feedback-wrong');
+            feedback.show(els.differentGridWrapper, '❌ 再試一次！', 'wrong');
+            clearTimeout(state.wrongFlashTimer);
+            state.wrongFlashTimer = setTimeout(function () {
+                card.classList.remove('feedback-wrong');
+            }, 600);
         }
 
         function updateDifferentScore() {
-            els.scoreNum.textContent = state.score;
+            els.differentScoreNum.textContent = state.score;
         }
 
         function updateDifferentRound() {
-            els.roundInfo.textContent = `第 ${state.round} 題`;
+            els.differentRoundInfo.textContent = `第 ${state.round} 題`;
         }
 
         function nextDifferentRound() {
@@ -148,7 +170,7 @@
             const result = buildDifferentRound(state.imageCount, FOOD_DATA, CATEGORY_NAMES, shuffle, pickRandom);
             state.oddItem = result.oddItem;
             state.items = result.items;
-            view.renderDifferentGrid(doc, els.gridContainer, state.items, {
+            view.renderDifferentGrid(doc, els.differentGridContainer, state.items, {
                 onCardClick: handleDifferentCardClick,
                 onMagnify: openMagnify
             });
@@ -160,7 +182,7 @@
         function pauseDifferent() {
             clearTimeout(state.wrongFlashTimer);
             clearTimeout(state.advanceTimer);
-            feedback.clear(els.gridWrapper);
+            feedback.clear(els.differentGridWrapper);
             state.isAnswered = false;
             state.isWaitingForNext = false;
         }
@@ -176,7 +198,7 @@
             state.isWaitingForNext = false;
             updateDifferentScore();
             updateDifferentRound();
-            feedback.clear(els.gridWrapper);
+            feedback.clear(els.differentGridWrapper);
         }
 
         function prepareDifferentGame() {
@@ -192,12 +214,7 @@
                 pauseTimer: false
             });
 
-            if (router) {
-                if (syncTopBarCentering) syncTopBarCentering();
-            } else {
-                els.game.style.display = 'flex';
-                if (syncTopBarCentering) syncTopBarCentering();
-            }
+            if (syncTopBarCentering) syncTopBarCentering();
         }
 
         function destroyDifferent() {
@@ -206,29 +223,24 @@
             try { controller.abort(); } catch (e) { /* already aborted */ }
         }
 
-        if (els.backBtn) {
-            els.backBtn.addEventListener('click', function () {
-                if (router) {
-                    router.goBack();
-                } else {
-                    els.game.style.display = 'none';
-                    pauseDifferent();
-                    if (typeof global.goToMainMenu === 'function') global.goToMainMenu();
-                }
-            }, listenOpts);
-        }
-        if (els.countSelect) {
-            els.countSelect.addEventListener('change', function () {
-                const count = parseInt(this.value, 10);
-                if (count >= 3 && count <= 6) {
-                    state.imageCount = count;
-                    if (prefs) {
-                        prefs.save('cognitiveDifferentPrefs', { imageCount: count });
-                    }
-                    generateDifferentRound();
-                }
-            }, listenOpts);
-        }
+        els.differentBackBtn.addEventListener('click', function () {
+            if (router) {
+                router.goBack();
+            } else {
+                els.differentGame.style.display = 'none';
+                pauseDifferent();
+                if (typeof global.goToMainMenu === 'function') global.goToMainMenu();
+            }
+        }, listenOpts);
+
+        els.differentCountSelect.addEventListener('change', function () {
+            const count = parseInt(this.value, 10);
+            if (count >= 3 && count <= 5) {
+                state.imageCount = count;
+                if (prefs) prefs.save('cognitiveDifferentPrefs', { imageCount: count });
+                generateDifferentRound();
+            }
+        }, listenOpts);
 
         updateDifferentScore();
         updateDifferentRound();
@@ -277,7 +289,8 @@
                     audio: window.CognitiveAudio,
                     openMagnify: window.openMagnify,
                     hideOverlay: window.hideOverlay,
-                    syncTopBarCentering: window.syncTopBarCentering
+                    syncTopBarCentering: window.syncTopBarCentering,
+                    gameScreen: window.CognitiveGameScreen
                 });
             }
         });
