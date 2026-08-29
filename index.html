@@ -586,140 +586,10 @@
     <div class="game-container app-screen game-screen hidden" id="differentGame"></div>
 
     <!-- ================================================================
-        Shopping memory game
+        Shopping memory game (composed through the shared Game Screen)
        ================================================================ -->
-    <div class="game-container app-screen" id="shoppingGame">
-        <div class="top-bar">
-            <div class="left-group">
-                <button class="back-btn" id="shoppingBackBtn" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>
-            </div>
-            <div class="question-area">
-                <span class="question-text" id="shoppingPhaseText">📋 購物清單（3 樣）</span>
-            </div>
-            <div class="right-group">
-                <div class="score-display" id="shoppingScoreDisplay">
-                    得分&nbsp;<span id="shoppingScoreNum">0</span>
-                </div>
-                <button class="action-btn" id="shoppingNameToggleBtn" title="顯示/隱藏食物名稱">
-                    名稱
-                    <span class="state-badge on" id="shoppingNameBadge"></span>
-                </button>
-                <span class="separator">|</span>
-                <button class="hamburger-btn" id="hamburgerBtnShopping" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
-            </div>
-        </div>
-
-        <div class="shopping-stage" id="shoppingStage">
-            <div class="shopping-view" id="shoppingListView">
-                <div class="shopping-list-panel">
-                    <div class="shopping-list-grid" id="shoppingListGrid"></div>
-                    <div class="shopping-list-hint" id="shoppingListHint"></div>
-                </div>
-            </div>
-
-            <div class="shopping-view hidden" id="shoppingRecallView">
-                <div class="shopping-recall-panel">
-                    <div class="shopping-recall-grid" id="shoppingRecallGrid"></div>
-                </div>
-            </div>
-
-            <div class="shopping-view hidden" id="shoppingOrderView">
-                <div class="shopping-order-panel">
-                    <div class="shopping-order-indicator" id="shoppingOrderIndicator">1</div>
-                    <div class="shopping-order-item" id="shoppingOrderItem"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bottom-controls">
-            <div class="left-group"></div>
-            <div class="center-group shopping-controls">
-                <span class="shopping-progress hidden" id="shoppingProgress">已揀選 0 / 3</span>
-                <span class="shopping-timer" id="shoppingTimer">--</span>
-                <button class="shopping-primary-btn hidden" id="shoppingManualStartBtn">▶ 開始揀選</button>
-            </div>
-            <div class="right-group"></div>
-        </div>
-    </div>
-
-    <!-- ================================================================
-        Shopping settings
-       ================================================================ -->
-    <div class="menu-overlay app-screen settings-screen" id="shoppingSettings">
-        <div class="chrome-btn-left">
-            <button class="back-btn" id="shoppingSettingsBackBtn" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>
-        </div>
-        <div class="chrome-btn-right chrome-btn-cluster">
-            <button class="save-btn" id="shoppingSaveSettingsBtn" title="儲存設定">💾儲存</button>
-            <button class="hamburger-btn" id="hamburgerBtnShoppingSettings" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
-        </div>
-        <div class="menu-header">
-            <div class="menu-title">🛒 設定</div>
-        </div>
-        <div class="menu-subtitle">設定購物清單與回憶任務</div>
-        <div class="settings-options" style="width:100%; display:flex; flex-direction:column; padding:calc(10px * var(--ui-scale)) calc(20px * var(--ui-scale));">
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">📋 清單顯示</span>
-                <select id="shoppingListDisplayMode" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="image" selected>圖片</option>
-                    <option value="name">名稱</option>
-                </select>
-            </div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">🔢 清單數量</span>
-                <select id="shoppingListCount" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="2">2</option>
-                    <option value="3" selected>3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                </select>
-            </div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="display:flex; align-items:center; gap:calc(6px * var(--ui-scale));">
-                    <span id="shoppingMemoryTimeLabel" class="shopping-memory-time-label" style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">
-                        <span class="shopping-memory-time-base">⏳ 記憶時間</span><span id="shoppingMemoryTimeSuffix" class="shopping-memory-time-suffix" aria-hidden="true">（每張）</span>
-                    </span>
-                    <span id="shoppingOrderLightbulb" class="shopping-order-lightbulb hidden" title="選擇已變更" aria-hidden="true">💡</span>
-                </span>
-                <select id="shoppingMemoryTime" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="5">5 秒</option>
-                    <option value="10">10 秒</option>
-                    <option value="15">15 秒</option>
-                    <option value="20">20 秒</option>
-                    <option value="manual" selected>手動</option>
-                </select>
-            </div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">🧩 選擇數量</span>
-                <select id="shoppingChoiceCount" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="4">4</option>
-                    <option value="6" selected>6</option>
-                    <option value="8">8</option>
-                </select>
-            </div>
-            <div class="separator" style="width:100%; border-top:calc(2px * var(--ui-scale)) solid var(--border-color);"></div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">🔢 順序要求</span>
-                <select id="shoppingOrderRequired" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="false" selected>不需順序</option>
-                    <option value="true">需要順序</option>
-                </select>
-            </div>
-            <div style="display:flex; align-items:center; gap:calc(12px * var(--ui-scale)); justify-content:space-between;">
-                <span style="font-size:calc(22px * var(--ui-scale)); font-weight:600; color:var(--text-color);">⏳ 揀選時間</span>
-                <select id="shoppingRecallTime" style="font-size:calc(20px * var(--ui-scale)); padding:calc(6px * var(--ui-scale)) calc(16px * var(--ui-scale)); border-radius:calc(30px * var(--ui-scale)); border:calc(2px * var(--ui-scale)) solid var(--border-color); background:var(--card-bg); color:var(--text-color);">
-                    <option value="0" selected>不限時</option>
-                    <option value="15">15 秒</option>
-                    <option value="30">30 秒</option>
-                    <option value="45">45 秒</option>
-                    <option value="60">60 秒</option>
-                </select>
-            </div>
-        </div>
-            <div class="settings-actions">
-                <button id="shoppingStartBtn" style="width:100%; padding:calc(14px * var(--ui-scale)); font-size:calc(28px * var(--ui-scale)); font-weight:700; border:none; border-radius:calc(40px * var(--ui-scale)); background:var(--highlight-correct); color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent; box-shadow:var(--btn-shadow-correct); transition: background 0.2s, transform 0.15s, box-shadow 0.15s;">▶ 開始遊戲</button>
-            </div>
-    </div>
+    <div class="game-container app-screen game-screen hidden" id="shoppingGame"></div>
+    <div class="menu-overlay app-screen settings-screen game-screen hidden" id="shoppingSettings"></div>
 
     <!-- ================================================================
         Memory pairs screens
@@ -882,6 +752,7 @@
     <script src="js/food/pairs-view.js"></script>
     <script src="js/food/pairs.js"></script>
     <script src="js/food/shopping-logic.js"></script>
+    <script src="js/food/shopping-screen.js"></script>
     <script src="js/food/shopping-view.js"></script>
     <script src="js/food/shopping.js"></script>
     <script src="js/food/main.js"></script>

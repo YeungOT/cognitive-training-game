@@ -65,3 +65,8 @@
     box-shadow: var(--btn-shadow-correct);
     transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
 }
+
+.game-screen-separator {
+    width: 100%;
+    border-top: calc(2px * var(--ui-scale)) solid var(--border-color);
+}

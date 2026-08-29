@@ -19,6 +19,8 @@
         if (!foodData) return null;
         var logic = deps.logic || (typeof global.CognitiveShoppingLogic !== 'undefined' ? global.CognitiveShoppingLogic : null);
         var view = deps.view || (typeof global.CognitiveShoppingView !== 'undefined' ? global.CognitiveShoppingView : null);
+        var gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
+        var shoppingScreen = deps.shoppingScreen || (typeof global.CognitiveShoppingScreen !== 'undefined' ? global.CognitiveShoppingScreen : null);
         var prefs = deps.prefs || (typeof global.CognitivePrefs !== 'undefined' ? global.CognitivePrefs : null);
         var activityTimer = deps.activityTimer || (typeof global.CognitiveActivityTimer !== 'undefined' ? global.CognitiveActivityTimer : null);
         var message = deps.message || (typeof global.CognitiveMessage !== 'undefined' ? global.CognitiveMessage : null);
@@ -29,7 +31,7 @@
         var syncTopBarCentering = deps.syncTopBarCentering || (typeof global.syncTopBarCentering === 'function' ? global.syncTopBarCentering : null);
         var nameVisibility = deps.nameVisibility || null;
 
-        if (!logic || !view) return null;
+        if (!logic || !view || !gameScreen || !shoppingScreen) return null;
         var FOOD_DATA = foodData.FOOD_DATA;
         var shuffle = foodData.shuffle;
         var getFoodId = foodData.getFoodId;
@@ -37,6 +39,11 @@
         var ORDER_MEMORY_OPTIONS = logic.ORDER_MEMORY_OPTIONS;
         var ORDER_INDICATOR_MS = 1500;
 
+        gameScreen.createGameScreen(doc, {
+            gameRoot: doc.getElementById('shoppingGame'),
+            settingsRoot: doc.getElementById('shoppingSettings'),
+            ...shoppingScreen.createShoppingScreenDefinition(logic)
+        });
         var els = view.createShoppingEls(doc);
         var lightbulb = view.createShoppingLightbulb(els);
 
@@ -598,6 +605,8 @@
                     router: window.CognitiveRouter,
                     audio: window.CognitiveAudio,
                     openMagnify: window.openMagnify,
+                    gameScreen: window.CognitiveGameScreen,
+                    shoppingScreen: window.CognitiveShoppingScreen,
                     syncTopBarCentering: window.syncTopBarCentering,
                     nameVisibility: window.CognitiveNameVisibility ? window.CognitiveNameVisibility.shared : null
                 });

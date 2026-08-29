@@ -41,8 +41,9 @@
 
         .shopping-list-grid {
             display: grid;
+            grid-template-columns: repeat(var(--grid-cols), var(--card));
+            grid-template-rows: repeat(var(--grid-rows), calc(var(--card) + var(--row-name-track)));
             row-gap: var(--grid-gap-v);
-
             column-gap: var(--grid-gap-h);
             justify-content: center;
             align-items: stretch;

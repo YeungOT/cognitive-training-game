@@ -58,6 +58,7 @@
             score.appendChild(scoreNum);
             right.appendChild(score);
         }
+        (config.actions || []).forEach(action => right.appendChild(createTopBarAction(doc, action)));
         if (config.dropdown) {
             assertNonEmptyString(config.dropdown.selectId, 'Top bar dropdown selectId');
             assertNonEmptyString(config.dropdown.label, 'Top bar dropdown label');
@@ -94,19 +95,55 @@
         return topBar;
     }
 
+    function createConfiguredElement(doc, config, tagName) {
+        const node = element(doc, config.tagName || tagName || 'div', config.className || '', config.id || '');
+        if (config.text) node.textContent = config.text;
+        if (config.title) node.title = config.title;
+        (config.children || []).forEach(child => node.appendChild(createConfiguredElement(doc, child)));
+        return node;
+    }
+
+    function createSaveButton(doc, config) {
+        const button = element(doc, 'button', 'save-btn', config.id);
+        button.title = config.title || '儲存設定';
+        button.textContent = config.label || '💾儲存';
+        return button;
+    }
+
+    function createTopBarAction(doc, action) {
+        if (!action || !action.id) throw new Error('Top bar action id is required');
+        const button = element(doc, 'button', action.className || 'action-btn', action.id);
+        button.title = action.title || '';
+        button.textContent = action.text || '';
+        if (action.badgeId) {
+            const badge = element(doc, 'span', action.badgeClassName || 'state-badge', action.badgeId);
+            button.appendChild(badge);
+        }
+        return button;
+    }
+
     function createStage(doc, config) {
         assertNonEmptyString(config.id, 'Stage id');
         assertNonEmptyString(config.className, 'Stage className');
         const stage = element(doc, 'div', config.className, config.id);
-        if (config.child) {
-            const child = element(doc, config.child.tagName || 'div', config.child.className || '', config.child.id || '');
-            stage.appendChild(child);        }
+        if (config.child) stage.appendChild(createConfiguredElement(doc, config.child, 'div'));
+        (config.children || []).forEach(child => stage.appendChild(createConfiguredElement(doc, child, 'div')));
         return stage;
     }
 
     function createFooter(doc, config) {
+        const footer = element(doc, 'div', config.className || 'footer');
+        if (config.controls) {
+            const left = element(doc, 'div', 'left-group');
+            const center = element(doc, 'div', config.controls.className || 'center-group');
+            (config.controls.children || []).forEach(child => center.appendChild(createConfiguredElement(doc, child)));
+            footer.appendChild(left);
+            footer.appendChild(center);
+            footer.appendChild(element(doc, 'div', 'right-group'));
+            return footer;
+        }
+
         assertNonEmptyString(config.roundId, 'Footer roundId');
-        const footer = element(doc, 'div', 'footer');
         if (config.hint) {
             const hint = element(doc, 'span', 'hint', config.hintId || '');
             hint.textContent = config.hint;
@@ -119,14 +156,19 @@
     }
 
     function createSelectField(doc, field) {
+        if (field.separator) return element(doc, 'div', 'separator game-screen-separator');
         assertNonEmptyString(field.id, 'Settings field id');
-        assertNonEmptyString(field.label, 'Settings field label');
+        if (!field.labelNode) {
+            assertNonEmptyString(field.label, 'Settings field label');
+        }
         if (!Array.isArray(field.options) || field.options.length === 0) {
             throw new Error('Settings field options must not be empty: ' + field.id);
         }
         const row = element(doc, 'div', 'game-screen-field');
-        const label = element(doc, 'span', 'game-screen-label');
-        label.textContent = field.label;
+        const label = field.labelNode
+            ? createConfiguredElement(doc, field.labelNode, 'span')
+            : element(doc, 'span', 'game-screen-label');
+        if (!field.labelNode) label.textContent = field.label;
         const select = element(doc, 'select', 'game-screen-select', field.id);
         field.options.forEach(option => {
             const optionElement = element(doc, 'option', '', option.value || '');
@@ -155,7 +197,8 @@
         back.title = '返回上一頁';
         back.appendChild(icon(doc));
         left.appendChild(back);
-        const right = element(doc, 'div', 'chrome-btn-right');
+        const right = element(doc, 'div', config.chromeRightCluster ? 'chrome-btn-right chrome-btn-cluster' : 'chrome-btn-right');
+        if (config.saveButton) right.appendChild(createSaveButton(doc, config.saveButton));
         const hamburger = element(doc, 'button', 'hamburger-btn', config.hamburgerId);
         hamburger.title = '開啟選單';
         hamburger.appendChild(menuIcon(doc));
