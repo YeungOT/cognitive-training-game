@@ -1069,3 +1069,14 @@
                 --safe-cap-bottom: 0px;
             }
         }
+
+        /* iPadOS standalone：版面視窗貼齊頂部，outerHeight > innerHeight。
+           底部差值（--app-underflow）為可繪製但在 100dvh 之外，
+           fixed 全螢幕圖層需向下延伸，否則側選單開啟時該區域露出原背景。*/
+        .pwa-standalone .slide-menu {
+            height: calc(100% + var(--app-underflow, 0px));
+        }
+        .pwa-standalone .slide-menu-backdrop,
+        .pwa-standalone .portrait-lock {
+            bottom: calc(-1 * var(--app-underflow, 0px));
+        }

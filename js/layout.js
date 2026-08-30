@@ -44,11 +44,29 @@
                 }
             }
 
+            // iPadOS standalone 模式：版面視窗貼齊頂部，outerHeight > innerHeight，
+            // 底部 32px 為可繪製但不在版面內的區域。把差值存入 CSS var，
+            // 讓 fixed 全螢幕圖層（側選單、背幕、直立鎖）延伸覆蓋。
+            function syncWindowUnderflow() {
+                var standalone = false;
+                if (global.matchMedia) {
+                    standalone =
+                        global.matchMedia('(display-mode: standalone)').matches ||
+                        global.matchMedia('(display-mode: fullscreen)').matches;
+                }
+                if (typeof navigator !== 'undefined' && navigator.standalone === true) standalone = true;
+                var gap = standalone ? Math.max(0, (global.outerHeight || 0) - (global.innerHeight || 0)) : 0;
+                document.documentElement.style.setProperty('--app-underflow', gap + 'px');
+                document.documentElement.classList.toggle('pwa-standalone', gap > 0);
+            }
+
             global.CognitiveLayout = {
                 resolveCssVarLength: resolveCssVarLength,
-                syncStageHeights: syncStageHeights
+                syncStageHeights: syncStageHeights,
+                syncWindowUnderflow: syncWindowUnderflow
             };
             global.syncStageHeights = syncStageHeights;
+            global.syncWindowUnderflow = syncWindowUnderflow;
 
             if (typeof window !== 'undefined') {
                 window.addEventListener('resize', syncStageHeights);
