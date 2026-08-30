@@ -11,6 +11,9 @@
             flex-direction: column;
             height: 100vh;
             height: 100dvh; /* 動態視埠高度；不支援時退回上一行 100vh */
+            /* iPadOS standalone: extend below the layout viewport to cover
+               the letterbox strip that iPadOS draws outside 100dvh. */
+            height: calc(100dvh + var(--app-underflow, 0px));
             width: 100vw;
             padding:
                 calc(6px * var(--ui-scale) + var(--safe-top))

@@ -96,8 +96,9 @@
         @supports (height: 100dvh) {
             :root {
                 --ui-scale: min(calc(100dvw / 1280px), calc(100dvh / 800px));
+                --app-underflow: 0px;
+                --avail-h: calc(100dvh + var(--app-underflow) - var(--safe-top) - var(--safe-bottom));
                 --avail-w: calc(100dvw - var(--safe-left) - var(--safe-right));
-                --avail-h: calc(100dvh - var(--safe-top) - var(--safe-bottom));
             }
         }
 
