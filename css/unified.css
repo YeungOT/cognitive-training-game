@@ -1061,3 +1061,11 @@
         #shoppingGame .shopping-stage {
             padding: calc(2px * var(--ui-scale)) 0;
         }
+
+        /* iPad landscape：底部安全區域由系統預留，不需在內容再加 safe-area padding，
+           避免遊戲底部出現雙重空白條。*/
+        @media (min-width: 700px) and (orientation: landscape) and (pointer: coarse) {
+            :root {
+                --safe-cap-bottom: 0px;
+            }
+        }
