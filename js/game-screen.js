@@ -76,7 +76,8 @@
 
     function createConfiguredElement(doc, config, tagName) {
         const node = element(doc, config.tagName || tagName || 'div', config.className || '', config.id || '');
-        if (config.text) node.textContent = config.text;
+        if (config.text !== undefined) node.textContent = config.text;
+        if (config.style) node.setAttribute('style', config.style);
         if (config.title) node.title = config.title;
         (config.children || []).forEach(child => node.appendChild(createConfiguredElement(doc, child)));
         return node;

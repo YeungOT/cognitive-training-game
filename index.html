@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8" />
@@ -263,63 +263,8 @@
         </div>
     </div>
 
-    <!-- ================================================================
-        N-back memory game
-       ================================================================ -->
-    <div class="game-container app-screen" id="nbackGame">
-        <div class="top-bar">
-            <div class="left-group">
-                <button class="back-btn" id="nbackBackBtn" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>
-            </div>
-            <div class="right-group">
-                <div class="score-display" id="nbackScoreDisplay">
-                    得分&nbsp;<span id="nbackScoreNum">0</span>
-                </div>
-                <select class="nback-n-select" id="nbackNSelect">
-                    <option value="1">N=1</option>
-                    <option value="2">N=2</option>
-                    <option value="3">N=3</option>
-                </select>
-                <span class="separator">|</span>
-                <button class="hamburger-btn" id="hamburgerBtnNback" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
-            </div>
-        </div>
-
-        <div id="nbackGridWrapper" class="grid-wrapper nback-grid-wrapper" style="flex:1; display:flex; align-items:center; justify-content:center;">
-            <div class="nback-image-container" id="nbackImageContainer">
-                <img id="nbackImage" src="" alt="食物" />
-                <div class="nback-overlay" id="nbackOverlay"></div>
-                <div class="nback-step-label" id="nbackStepLabel">#0</div>
-                <button class="magnify-btn nback-magnify-btn" id="nbackMagnifyBtn" title="放大圖片" style="display:none;">🔍</button>
-            </div>
-        </div>
-
-        <div class="bottom-controls">
-            <div class="left-group">
-                <div class="speed-control">
-                    <button class="speed-btn" id="nbackSpeedDown" title="減慢速度" aria-label="減慢速度">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>
-                    </button>
-                    <span class="speed-display" id="nbackSpeedDisplay">5</span>
-                    <button class="speed-btn" id="nbackSpeedUp" title="加快速度" aria-label="加快速度">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                    </button>
-                </div>
-                <button class="play-btn" id="nbackPlayBtn">
-                    <span class="play-icon">
-                        <span class="triangle"></span>
-                        <span class="pause-bar left"></span>
-                        <span class="pause-bar right"></span>
-                    </span>
-                </button>
-            </div>
-            <div class="center-group nback-controls">
-                <button class="match-btn" id="nbackMatchBtn">✅ 相同</button>
-                <button class="notmatch-btn" id="nbackNotMatchBtn">❌ 不相同</button>
-            </div>
-            <div class="right-group"></div>
-        </div>
-    </div>
+    <!-- N-back game (composed through the shared Game Screen) -->
+    <div class="game-container app-screen game-screen hidden" id="nbackGame"></div>
 
     <!-- ================================================================
         N-back mode selection
@@ -515,14 +460,15 @@
     <script src="js/food/food-logic.js"></script>
     <script src="js/food/food-view.js"></script>
     <script src="js/food/sequence.js"></script>
+    <script src="js/game-screen.js"></script>
     <script src="js/food/nback-view.js"></script>
+    <script src="js/food/nback-screen.js"></script>
     <script src="js/food/nback.js"></script>
     <script src="js/food/nback-audio-map.js"></script>
     <script src="js/food/dual-nback-logic.js"></script>
     <script src="js/food/dual-nback-view.js"></script>
     <script src="js/food/gng-logic.js"></script>
     <script src="js/food/gng-view.js"></script>
-    <script src="js/game-screen.js"></script>
     <script src="js/food/dual-nback-screen.js"></script>
     <script src="js/food/dual-nback.js"></script>
     <script src="js/food/gng-screen.js"></script>
