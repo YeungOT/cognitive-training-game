@@ -69,11 +69,15 @@
             global.syncWindowUnderflow = syncWindowUnderflow;
 
             if (typeof window !== 'undefined') {
+                window.addEventListener('resize', syncWindowUnderflow);
+                window.addEventListener('orientationchange', syncWindowUnderflow);
                 window.addEventListener('resize', syncStageHeights);
                 window.addEventListener('orientationchange', syncStageHeights);
                 if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', syncWindowUnderflow);
                     document.addEventListener('DOMContentLoaded', syncStageHeights);
                 } else {
+                    syncWindowUnderflow();
                     syncStageHeights();
                 }
             }
