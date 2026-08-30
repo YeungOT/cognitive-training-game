@@ -1080,3 +1080,9 @@
         .pwa-standalone .portrait-lock {
             bottom: calc(-1 * var(--app-underflow, 0px));
         }
+        /* Standalone underflow: html/body must grow too, otherwise the
+           100dvh+underflow game container is clipped by body overflow hidden. */
+        html.pwa-standalone,
+        html.pwa-standalone body {
+            height: calc(100% + var(--app-underflow, 0px));
+        }
