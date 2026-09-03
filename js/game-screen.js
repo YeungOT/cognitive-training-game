@@ -235,12 +235,6 @@
         root.appendChild(right);
         root.appendChild(header);
 
-        if (config.subtitle) {
-            const subtitle = element(doc, 'div', 'menu-subtitle');
-            subtitle.textContent = config.subtitle;
-            root.appendChild(subtitle);
-        }
-
         const options = element(doc, 'div', 'settings-options');
         config.fields.forEach(field => options.appendChild(createSelectField(doc, field)));
         root.appendChild(options);

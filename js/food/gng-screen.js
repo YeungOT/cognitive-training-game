@@ -82,7 +82,6 @@
                 id: 'gngSettings',
                 backId: 'gngSettingsBackBtn',
                 title: '⚙️ 設定',
-                subtitle: '設定任務規則與切換條件',
                 chromeRightCluster: true,
                 saveButton: { id: 'gngSaveSettingsBtn', label: '💾儲存', title: '儲存設定' },
                 hamburgerId: 'hamburgerBtnGngSettings',

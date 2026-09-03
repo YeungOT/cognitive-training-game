@@ -94,7 +94,6 @@
                 id: 'dualNbackSettings',
                 backId: 'dualNbackSettingsBackBtn',
                 title: '⚙️ 設定',
-                subtitle: '選擇模態',
                 chromeRightCluster: true,
                 hamburgerId: 'hamburgerBtnDualNbackSettings',
                 fields: [

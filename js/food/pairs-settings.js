@@ -112,7 +112,6 @@
                 id: 'pairsSettings',
                 backId: 'pairsSettingsBackBtn',
                 title: '🃏 配對記憶',
-                subtitle: '選擇對數',
                 hamburgerId: 'hamburgerBtnPairsSettings',
                 fields: [
                     {

@@ -82,7 +82,6 @@
                 id: 'shoppingSettings',
                 backId: 'shoppingSettingsBackBtn',
                 title: '🛒 設定',
-                subtitle: '設定購物清單與回憶任務',
                 chromeRightCluster: true,
                 saveButton: {
                     id: 'shoppingSaveSettingsBtn',
