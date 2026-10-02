@@ -947,19 +947,21 @@
             .dropdown-wrapper select {
                 font-size: calc(22px * var(--ui-scale));
             }
-            /* Fill the 38px wrapper so the whole visible pill is the tap target.
+            /* Inset the control inside the 38px wrapper rather than filling it.
                The base rule caps selects at 36px * --ui-scale (17px on an iPhone
                SE), which left the affordance looking ~80x38 but only tappable in
-               a 31x17 sliver. Replaces a .nback-n-select rule that matched no
-               element, so every wrapped select benefits, not just the N picker. */
+               a 31x17 sliver. 30px still clears the 24px AA floor while reading as
+               a control sitting inside the pill instead of a flat block. Replaces
+               a .nback-n-select rule that matched no element, so every wrapped
+               select benefits, not just the N picker. */
             .dropdown-wrapper select {
-                height: 38px;
-                min-height: 38px;
+                height: 30px;
+                min-height: 30px;
                 min-width: 38px;
                 max-height: none;
             }
             .speed-control {
-                height: 34px;
+                height: 38px;
             }
             .play-btn,
             .speed-btn {
