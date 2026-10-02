@@ -947,9 +947,16 @@
             .dropdown-wrapper select {
                 font-size: calc(22px * var(--ui-scale));
             }
-            .nback-n-select {
+            /* Fill the 38px wrapper so the whole visible pill is the tap target.
+               The base rule caps selects at 36px * --ui-scale (17px on an iPhone
+               SE), which left the affordance looking ~80x38 but only tappable in
+               a 31x17 sliver. Replaces a .nback-n-select rule that matched no
+               element, so every wrapped select benefits, not just the N picker. */
+            .dropdown-wrapper select {
                 height: 38px;
                 min-height: 38px;
+                min-width: 38px;
+                max-height: none;
             }
             .speed-control {
                 height: 34px;
