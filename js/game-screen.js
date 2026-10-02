@@ -47,7 +47,9 @@
 
     function createTopBar(doc, config) {
         assertNonEmptyString(config.backId, 'Top bar backId');
-        assertNonEmptyString(config.scoreId, 'Top bar scoreId');
+        // Score is optional (Palm has none), but a supplied value is still
+        // validated so a mistyped key fails loudly instead of silently dropping it.
+        if ('scoreId' in config) assertNonEmptyString(config.scoreId, 'Top bar scoreId');
         assertNonEmptyString(config.hamburgerId, 'Top bar hamburgerId');
 
         const topBar = element(doc, 'div', 'top-bar');
@@ -74,10 +76,15 @@
             right.appendChild(score);
         }
         if (config.dropdown) right.appendChild(createTopBarDropdown(doc, config.dropdown));
+        // `dropdown` stays the single-dropdown shorthand; `dropdowns` adds more
+        // (Palm needs gesture + hand pickers side by side).
+        (config.dropdowns || []).forEach(dropdown => right.appendChild(createTopBarDropdown(doc, dropdown)));
         (config.actions || []).forEach(action => right.appendChild(createTopBarAction(doc, action)));
-        const separator = element(doc, 'span', 'separator');
-        separator.textContent = '|';
-        right.appendChild(separator);
+        if (config.separator !== false) {
+            const separator = element(doc, 'span', 'separator');
+            separator.textContent = '|';
+            right.appendChild(separator);
+        }
         const hamburger = element(doc, 'button', 'hamburger-btn', config.hamburgerId);
         hamburger.title = '開啟選單';
         hamburger.appendChild(menuIcon(doc));

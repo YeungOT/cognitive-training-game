@@ -322,68 +322,9 @@
     <!-- ================================================================
         手掌跳飛機
        ================================================================ -->
-    <div class="game-container app-screen" id="palm">
-        <div class="top-bar">
-            <div class="left-group">
-                <button class="back-btn" id="palmBackBtn" data-app-back="previous" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>
-            </div>
-            <div class="right-group">
-                <div class="dropdown-wrapper">
-                    <label for="difficultySelect">手勢</label>
-                    <select id="difficultySelect">
-                        <option value="easy">包剪揼</option>
-                        <option value="hard" selected>全部</option>
-                    </select>
-                </div>
-                <div class="dropdown-wrapper">
-                    <label for="handSelect">正反手</label>
-                    <select id="handSelect">
-                        <option value="both" selected>正反手</option>
-                        <option value="palmar">正手</option>
-                    </select>
-                </div>
-                <button class="hamburger-btn" id="palmMenuBtn" title="開啟選單"><img class="menu-icon" src="assets/icons/menu.png" alt="menu" /></button>
-            </div>
-        </div>
-
-        <div class="grid-wrapper">
-            <div class="game-board">
-                <div class="side" id="leftSide">
-                    <div id="leftGesture" class="gesture-image"></div>
-                </div>
-                <div class="side" id="rightSide">
-                    <div id="rightGesture" class="gesture-image"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bottom-controls">
-            <div class="left-group">
-                <div class="speed-control">
-                    <button class="speed-btn" id="speedDown" title="減慢速度" aria-label="減慢速度">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>
-                    </button>
-                    <span class="speed-display" id="speedDisplay">5</span>
-                    <button class="speed-btn" id="speedUp" title="加快速度" aria-label="加快速度">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                    </button>
-                </div>
-                <button class="play-btn" id="playBtn" title="自動播放">
-                    <span class="play-icon">
-                        <span class="triangle"></span>
-                        <span class="pause-bar left"></span>
-                        <span class="pause-bar right"></span>
-                    </span>
-                </button>
-            </div>
-            <div class="center-group palm-controls">
-                <button id="swapBtn" title="交換左右手勢">
-                    <span id="swapSymbol">交換</span>
-                </button>
-            </div>
-            <div class="right-group"></div>
-        </div>
-    </div>
+    <!-- Palm (手勢) markup is composed at runtime by js/palm-screen.js via the
+         shared Game Screen, matching the other migrated games. -->
+    <div class="game-container app-screen" id="palm"></div>
 
     <!-- ================================================================
         Shared overlays and side menu
@@ -447,7 +388,6 @@
     <script src="js/reality.js"></script>
     <script src="js/timer.js"></script>
     <script src="js/session.js"></script>
-    <script src="js/palm.js"></script>
     <script src="js/food/food-data.js"></script>
     <script src="js/food/prefs.js"></script>
     <script src="js/food/message.js"></script>
@@ -457,6 +397,8 @@
     <script src="js/food/food-view.js"></script>
     <script src="js/food/sequence.js"></script>
     <script src="js/game-screen.js"></script>
+    <script src="js/food/palm-screen.js"></script>
+    <script src="js/palm.js"></script>
     <script src="js/food/nback-view.js"></script>
     <script src="js/food/nback-screen.js"></script>
     <script src="js/food/nback.js"></script>

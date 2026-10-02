@@ -307,6 +307,81 @@ async function main() {
       return shared === false && foodHidden === true;
     });
 
+    // ---------------- palm (composed screen) ----------------
+    await check('palm: composed screen renders stage + controls', async () => {
+      await nav('palm');
+      await dismiss();
+      return await evaluate(`(() => {
+        const p = document.getElementById('palm');
+        return !!p.querySelector('.grid-wrapper .game-board')
+          && !!p.querySelector('#leftGesture') && !!p.querySelector('#rightGesture')
+          && !!p.querySelector('.speed-control') && !!p.querySelector('#swapBtn')
+          && !!p.querySelector('#playBtn') && p.classList.contains('game-screen');
+      })()`) === true;
+    });
+    await check('palm: top bar keeps its own chrome (no score, no separator)', async () => {
+      return await evaluate(`(() => {
+        const p = document.getElementById('palm');
+        return !p.querySelector('.score-display') && !p.querySelector('.separator')
+          && !!p.querySelector('#difficultySelect') && !!p.querySelector('#handSelect')
+          && !!p.querySelector('#palmMenuBtn') && !!p.querySelector('#palmBackBtn');
+      })()`) === true;
+    });
+    await check('palm: speed +/- change the level', async () => {
+      const before = await evaluate(`document.getElementById('speedDisplay').textContent`);
+      await clickSel('#speedUp');
+      await delay(150);
+      const after = await evaluate(`document.getElementById('speedDisplay').textContent`);
+      await clickSel('#speedDown');
+      await delay(150);
+      const restored = await evaluate(`document.getElementById('speedDisplay').textContent`);
+      return before === '5' && after === '6' && restored === '5';
+    });
+    await check('palm: gesture images actually load', async () => {
+      await delay(500);
+      return await evaluate(`(() => {
+        const l = document.querySelector('#leftGesture img'), r = document.querySelector('#rightGesture img');
+        return !!l && !!r && l.complete && l.naturalWidth > 0 && r.complete && r.naturalWidth > 0;
+      })()`) === true;
+    });
+    await check('palm: swap mirrors left and right gestures', async () => {
+      const read = `(() => { const l = document.querySelector('#leftGesture img'), r = document.querySelector('#rightGesture img'); return (l && r) ? l.src + '|' + r.src : ''; })()`;
+      const before = await evaluate(read);
+      await clickSel('#swapBtn');
+      await delay(400);
+      const after = await evaluate(read);
+      const [beforeL, beforeR] = before.split('|');
+      const [afterL, afterR] = after.split('|');
+      return before !== '' && before !== after &&
+        beforeL.replace('/left/', '/right/') === afterR &&
+        beforeR.replace('/right/', '/left/') === afterL;
+    });
+    await check('palm: play toggles autoplay', async () => {
+      await clickSel('#playBtn');
+      await delay(300);
+      const playing = await evaluate(`document.getElementById('playBtn').classList.contains('playing')`);
+      await clickSel('#playBtn');
+      await delay(250);
+      const stopped = await evaluate(`document.getElementById('playBtn').classList.contains('playing')`);
+      return playing === true && stopped === false;
+    });
+    await check('palm: difficulty + hand selects persist to prefs', async () => {
+      await evaluate(`(() => {
+        const d = document.getElementById('difficultySelect');
+        d.value = 'easy'; d.dispatchEvent(new Event('change'));
+        return true;
+      })()`);
+      await delay(250);
+      const stored = await evaluate(`JSON.stringify((window.CognitiveSettingsStore.load(window.CognitiveSettingsStore.keys.palm) || {}))`);
+      await evaluate(`(() => {
+        const d = document.getElementById('difficultySelect');
+        d.value = 'hard'; d.dispatchEvent(new Event('change'));
+        return true;
+      })()`);
+      await delay(200);
+      return stored.indexOf('"difficulty":"easy"') !== -1;
+    });
+
     // ---------------- summary ----------------
     console.log('pageErrors=' + JSON.stringify(errors));
     const pass = failures.length === 0 && errors.length === 0;
