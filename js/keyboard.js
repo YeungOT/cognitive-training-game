@@ -172,7 +172,7 @@
                 '</span> ' + text + '</div>';
         };
         return '<div class="help-heading">⌨️ 鍵盤操作</div>' +
-            line('J / K', '— 按左 / 右按鈕（如：相同 / 不相同、Go / 不Go）') +
+            line('J / K', '— 按左 / 右按鈕（如：相同 / 不相同、Go / No-Go）') +
             line('Space', '— 下一張') +
             line('P', '— 開始 / 暫停') +
             line('- / =', '— 調節速度') +

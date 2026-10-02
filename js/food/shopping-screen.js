@@ -99,7 +99,7 @@
                             tagName: 'span',
                             className: 'game-screen-label shopping-memory-time-label',
                             children: [
-                                { tagName: 'span', className: 'shopping-memory-time-base', text: '⏳ 記憶時間' },
+                                { tagName: 'span', className: 'shopping-memory-time-base', text: '📖 記憶時間' },
                                 { tagName: 'span', id: 'shoppingMemoryTimeSuffix', className: 'shopping-memory-time-suffix', text: '（每張）' },
                                 { tagName: 'span', id: 'shoppingOrderLightbulb', className: 'shopping-order-lightbulb hidden', title: '選擇已變更', text: '💡' }
                             ]
@@ -107,7 +107,7 @@
                     },
                     field('shoppingChoiceCount', '🧩 選擇數量', ['4', '6', '8'], ['4', '6', '8'], 1),
                     { separator: true },
-                    field('shoppingOrderRequired', '🔢 順序要求', ['false', 'true'], ['不需順序', '需要順序'], 0),
+                    field('shoppingOrderRequired', '🔗 順序要求', ['false', 'true'], ['不需順序', '需要順序'], 0),
                     field('shoppingRecallTime', '⏳ 揀選時間', ['0', '15', '30', '45', '60'], ['不限時', '15 秒', '30 秒', '45 秒', '60 秒'], 0)
                 ],
                 action: { id: 'shoppingStartBtn', label: '▶ 開始遊戲' }
