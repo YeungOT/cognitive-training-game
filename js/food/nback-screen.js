@@ -48,9 +48,17 @@
                                     tagName: 'div',
                                     className: 'speed-control',
                                     children: [
-                                        { tagName: 'button', id: 'nbackSpeedDown', className: 'speed-btn', title: '減慢速度', text: '−' },
+                                        { tagName: 'button', id: 'nbackSpeedDown', className: 'speed-btn', title: '減慢速度', children: [
+                                            { tagName: 'svg', attributes: { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, children: [
+                                                { tagName: 'path', attributes: { d: 'M5 12h14' } }
+                                            ] }
+                                        ] },
                                         { tagName: 'span', id: 'nbackSpeedDisplay', className: 'speed-display', text: '5' },
-                                        { tagName: 'button', id: 'nbackSpeedUp', className: 'speed-btn', title: '加快速度', text: '+' }
+                                        { tagName: 'button', id: 'nbackSpeedUp', className: 'speed-btn', title: '加快速度', children: [
+                                            { tagName: 'svg', attributes: { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, children: [
+                                                { tagName: 'path', attributes: { d: 'M12 5v14M5 12h14' } }
+                                            ] }
+                                        ] }
                                     ]
                                 },
                                 { tagName: 'button', id: 'nbackPlayBtn', className: 'play-btn', title: '播放/暫停', children: [

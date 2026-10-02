@@ -7,9 +7,24 @@
         }
     }
 
+    // SVG children must be created in the SVG namespace; doc.createElement('svg')
+    // yields an inert HTMLUnknownElement. Palm can hand-author SVG in index.html
+    // because nothing stands between it and the DOM - this closes that gap so
+    // composed screens are not restricted to text glyphs.
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const SVG_TAGS = {
+        svg: true, path: true, circle: true, rect: true,
+        line: true, polyline: true, polygon: true, g: true
+    };
+
     function element(doc, tagName, className, id) {
-        const node = doc.createElement(tagName);
-        if (className) node.className = className;
+        const isSvg = SVG_TAGS[tagName] === true;
+        const node = isSvg ? doc.createElementNS(SVG_NS, tagName) : doc.createElement(tagName);
+        if (className) {
+            // SVGElement.className is a read-only SVGAnimatedString.
+            if (isSvg) node.setAttribute('class', className);
+            else node.className = className;
+        }
         if (id) node.id = id;
         return node;
     }
@@ -79,6 +94,11 @@
         if (config.text !== undefined) node.textContent = config.text;
         if (config.style) node.setAttribute('style', config.style);
         if (config.title) node.title = config.title;
+        if (config.attributes) {
+            Object.keys(config.attributes).forEach(name => {
+                node.setAttribute(name, config.attributes[name]);
+            });
+        }
         (config.children || []).forEach(child => node.appendChild(createConfiguredElement(doc, child)));
         return node;
     }
