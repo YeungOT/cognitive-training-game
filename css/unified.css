@@ -995,9 +995,19 @@
                 padding-bottom: calc(2px * var(--ui-scale));
                 background: transparent;
             }
+            /* Match the shared phone sizing. The speed control follows .speed-control
+               (38px) and the swap button is Palm's primary answer control, so it
+               follows the other games' answer buttons (38px). The play button stays
+               on the shared 34px rule. These are ID-scoped, so they would otherwise
+               silently outrank the class-scoped rules they are meant to mirror. */
             #palm .speed-control,
-            #palm .play-btn,
             #palm #swapBtn {
+                height: 38px;
+                min-height: 38px;
+            }
+            /* The base #palm .play-btn rule is ID-scoped and resolves to 44px via
+               var(--tap-min); re-pin it to the shared 34px phone play button. */
+            #palm .play-btn {
                 height: 34px;
                 min-height: 34px;
             }
