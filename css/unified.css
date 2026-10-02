@@ -218,14 +218,17 @@
             gap: calc(14px * var(--ui-scale));
         }
 
-        /* Equal-height palm controls, loaded after responsive.css */
-        #palm #swapBtn,
+        /* Equal-height palm controls, loaded after responsive.css. The swap button
+           is excluded because it is Palm's primary answer control, so it follows
+           the 60px height the other games use for their answer buttons rather than
+           the 47px used by the secondary speed/play controls. */
         #palm .speed-control,
         #palm .play-btn {
             height: max(var(--tap-min), calc(47px * var(--ui-scale)));
             min-height: var(--tap-min);
         }
         #palm #swapBtn {
+            height: calc(60px * var(--ui-scale));
             background: var(--btn-bg);
             border: none;
             color: var(--btn-text);
