@@ -971,17 +971,20 @@
                 width: 34px;
                 height: 34px;
             }
-            /* Reaction-game answer buttons (GNG go/no-go, N-back match,
-               dual N-back modality). These are the most-pressed controls in the
-               app, yet their base height of 56-60px * --ui-scale collapsed them
-               to 26-28px on an iPhone SE — smaller than the play/pause button
+            /* Primary answer controls: GNG go/no-go, N-back match, dual N-back
+               modality, and Palm's swap. These are the most-pressed controls in
+               the app, yet their base height of 56-60px * --ui-scale collapsed
+               them to 26-28px on an iPhone SE — smaller than the play/pause button
                beside them. Pin to the same 38px used for the rest of the phone
-               chrome so the primary action is never the smallest target. */
+               chrome so the primary action is never the smallest target.
+               #palm #swapBtn must be listed explicitly: its own ID-scoped
+               height/min-width rules outrank anything set here by class. */
             .gng-controls .go-btn,
             .gng-controls .nogo-btn,
             .nback-controls .match-btn,
             .nback-controls .notmatch-btn,
-            .dual-match-controls .dual-match-btn {
+            .dual-match-controls .dual-match-btn,
+            #palm #swapBtn {
                 height: 38px;
                 min-height: 38px;
                 /* 88px sits above the widest natural label (不相同, 87px), so the
@@ -1003,8 +1006,7 @@
                follows the other games' answer buttons (38px). The play button stays
                on the shared 34px rule. These are ID-scoped, so they would otherwise
                silently outrank the class-scoped rules they are meant to mirror. */
-            #palm .speed-control,
-            #palm #swapBtn {
+            #palm .speed-control {
                 height: 38px;
                 min-height: 38px;
             }
