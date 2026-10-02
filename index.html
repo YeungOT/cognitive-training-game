@@ -25,7 +25,7 @@
     <link rel="stylesheet" href="css/pairs.css" />
     <link rel="stylesheet" href="css/unified.css" />
     <script src="js/settings.js"></script>
-    <script>try{document.documentElement.setAttribute('data-theme',CognitiveSettingsStore.load(CognitiveSettingsStore.keys.theme).theme==='dark'?'dark':'light');}catch(e){}</script>
+    <script>try{var r=document.documentElement,t=CognitiveSettingsStore.load(CognitiveSettingsStore.keys.theme).theme==='dark'?'dark':'light',m=document.querySelector('meta[name="theme-color"]');r.setAttribute('data-theme',t);if(m){var s=getComputedStyle(r).getPropertyValue('--container-bg').trim();if(s){m.content=s;}}}catch(e){}</script>
 </head>
 <body>
 

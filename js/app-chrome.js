@@ -64,7 +64,15 @@
             applyTheme();
 
             function applyTheme() {
-                document.documentElement.setAttribute('data-theme', settings.theme);
+                var root = document.documentElement;
+                root.setAttribute('data-theme', settings.theme);
+                // Keep OS/browser chrome in step with the theme. Reads the existing
+                // --container-bg token so the palette is not duplicated here.
+                var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+                if (themeColorMeta) {
+                    var surface = getComputedStyle(root).getPropertyValue('--container-bg').trim();
+                    if (surface) themeColorMeta.content = surface;
+                }
             }
 
             function refreshSettingsFromStorage() {
