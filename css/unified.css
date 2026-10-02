@@ -979,7 +979,11 @@
             .dual-match-controls .dual-match-btn {
                 height: 38px;
                 min-height: 38px;
-                min-width: 38px;
+                /* 88px sits above the widest natural label (不相同, 87px), so the
+                   pair renders evenly instead of 75/87, and gives the emoji-only
+                   GNG pair a real target. The footer grid is 1fr auto 1fr, so the
+                   group simply absorbs width from the empty side columns. */
+                min-width: 88px;
             }
             .bottom-controls {
                 border-top: none;
