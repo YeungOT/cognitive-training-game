@@ -105,7 +105,7 @@
         const state = {
             imageCount: 4,
             score: 0,
-            round: 0,
+            round: 1,
             items: [],
             oddItem: null,
             isAnswered: false,
@@ -191,7 +191,7 @@
             clearTimeout(state.wrongFlashTimer);
             clearTimeout(state.advanceTimer);
             state.score = 0;
-            state.round = 0;
+            state.round = 1;
             state.items = [];
             state.oddItem = null;
             state.isAnswered = false;
@@ -204,7 +204,7 @@
         function prepareDifferentGame() {
             pauseDifferent();
             state.score = 0;
-            state.round = 0;
+            state.round = 1;
             updateDifferentScore();
             generateDifferentRound();
             message.show({
