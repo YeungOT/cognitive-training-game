@@ -966,6 +966,21 @@
                 width: 34px;
                 height: 34px;
             }
+            /* Reaction-game answer buttons (GNG go/no-go, N-back match,
+               dual N-back modality). These are the most-pressed controls in the
+               app, yet their base height of 56-60px * --ui-scale collapsed them
+               to 26-28px on an iPhone SE — smaller than the play/pause button
+               beside them. Pin to the same 38px used for the rest of the phone
+               chrome so the primary action is never the smallest target. */
+            .gng-controls .go-btn,
+            .gng-controls .nogo-btn,
+            .nback-controls .match-btn,
+            .nback-controls .notmatch-btn,
+            .dual-match-controls .dual-match-btn {
+                height: 38px;
+                min-height: 38px;
+                min-width: 38px;
+            }
             .bottom-controls {
                 border-top: none;
                 min-height: 0;
