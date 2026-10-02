@@ -214,19 +214,14 @@
             animation: none;
         }
 
-        #palm .bottom-controls .center-group {
-            gap: calc(14px * var(--ui-scale));
-        }
-
-        /* Equal-height palm controls, loaded after responsive.css. The swap button
-           is excluded because it is Palm's primary answer control, so it follows
-           the 60px height the other games use for their answer buttons rather than
-           the 47px used by the secondary speed/play controls. */
-        #palm .speed-control,
-        #palm .play-btn {
-            height: max(var(--tap-min), calc(47px * var(--ui-scale)));
-            min-height: var(--tap-min);
-        }
+        /* Palm is composed by the shared Game Screen like the other games, so it
+           inherits the shared .speed-control / .speed-btn / .speed-display /
+           .play-btn rules. It used to carry ID-scoped copies of all four here;
+           they omitted declarations (speed-control and play-btn had no height),
+           so compensating height rules were bolted on beside them and those
+           silently outranked the shared classes they were meant to mirror.
+           Only genuinely Palm-specific selectors remain: #swapBtn (no other game
+           has it) and the gesture-board layout below. */
         #palm #swapBtn {
             height: calc(60px * var(--ui-scale));
             background: var(--btn-bg);
@@ -259,94 +254,6 @@
             outline: calc(3px * var(--ui-scale)) solid #ffb300;
             outline-offset: calc(2px * var(--ui-scale));
         }
-        #palm .speed-control {
-            display: flex;
-            align-items: center;
-            gap: calc(6px * var(--ui-scale));
-            background: var(--nback-brown);
-            padding: 0 calc(10px * var(--ui-scale));
-            border-radius: calc(30px * var(--ui-scale));
-            border: none;
-            transition: background 0.3s, border 0.3s;
-        }
-        #palm .speed-btn {
-            width: calc(28px * var(--ui-scale));
-            height: calc(28px * var(--ui-scale));
-            min-width: var(--tap-min);
-            min-height: var(--tap-min);
-            border: none;
-            border-radius: 50%;
-            background: transparent;
-            color: #fff;
-            font-size: 1.1rem;
-            font-weight: 900;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            line-height: 1;
-            margin-top: calc(2px * var(--ui-scale));
-            box-shadow: none;
-            transition: transform 0.15s, color 0.3s;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #palm .speed-btn svg {
-            width: calc(22px * var(--ui-scale));
-            height: calc(22px * var(--ui-scale));
-            display: block;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 3.4;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-        #palm .speed-btn:hover {
-            background: rgba(255, 255, 255, 0.16);
-        }
-        #palm .speed-btn:active {
-            transform: scale(0.8);
-        }
-        #palm .speed-btn:focus-visible {
-            outline: calc(3px * var(--ui-scale)) solid #ffb300;
-            outline-offset: calc(2px * var(--ui-scale));
-        }
-        #palm .speed-display {
-            min-width: calc(32px * var(--ui-scale));
-            text-align: center;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #fff;
-            line-height: 1;
-            transition: color 0.3s;
-        }
-        #palm .play-btn {
-            width: max(var(--tap-min), calc(47px * var(--ui-scale)));
-            min-width: var(--tap-min);
-            border-radius: 50%;
-            background: var(--nback-brown);
-        }
-        #palm .play-btn:hover {
-            background: #6D4C41;
-        }
-        [data-theme="dark"] #palm .speed-control {
-            background: var(--btn-bg);
-        }
-        [data-theme="dark"] #palm .speed-btn {
-            color: #fff;
-            background: transparent;
-        }
-        [data-theme="dark"] #palm .speed-btn:hover {
-            background: rgba(255, 255, 255, 0.16);
-        }
-        [data-theme="dark"] #palm .play-btn {
-            background: var(--btn-bg);
-        }
-        [data-theme="dark"] #palm .play-btn:hover {
-            background: #1565c0;
-        }
-
         /* Physical button press: depth plus scale while held. */
         button.pressed:not(:disabled):not(.disabled),
         [role="button"].pressed:not(.disabled),
@@ -1000,31 +907,6 @@
                 padding-top: calc(2px * var(--ui-scale));
                 padding-bottom: calc(2px * var(--ui-scale));
                 background: transparent;
-            }
-            /* Match the shared phone sizing. The speed control follows .speed-control
-               (38px) and the swap button is Palm's primary answer control, so it
-               follows the other games' answer buttons (38px). The play button stays
-               on the shared 34px rule. These are ID-scoped, so they would otherwise
-               silently outrank the class-scoped rules they are meant to mirror. */
-            #palm .speed-control {
-                height: 38px;
-                min-height: 38px;
-            }
-            /* The base #palm .play-btn rule is ID-scoped and resolves to 44px via
-               var(--tap-min); re-pin it to the shared 34px phone play button. */
-            #palm .play-btn {
-                height: 34px;
-                min-height: 34px;
-            }
-            #palm .play-btn {
-                width: 34px;
-                min-width: 34px;
-            }
-            #palm .speed-btn {
-                width: 34px;
-                height: 34px;
-                min-width: 34px;
-                min-height: 34px;
             }
             #home .home-grid,
             #mainMenu .category-grid,
