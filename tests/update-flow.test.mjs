@@ -245,6 +245,77 @@ test('an update reload marks the next boot so the loader can be skipped', async 
     assert.equal(flow.POST_UPDATE_RELOAD_KEY, 'cognitive:post-update-reload');
 });
 
+test('an update install that ends in a reload does not show a second loader', async function () {
+    const first = createWorker('activated');
+    const registration = createRegistration(first);
+    const second = createWorker('activated');
+    let calls = 0;
+    registration.update = async function () {
+        this.updateCalls++;
+        calls++;
+        // The startup check finds nothing; the later check (after boot, while the
+        // user is on home) finds the update. That is the second-bar scenario.
+        if (calls === 1) return;
+        this.installing = second;
+        this.active = second;
+        this.emit('updatefound');
+    };
+    const container = createServiceWorkerContainer(registration);
+    container.controller = {};
+    const loader = createLoader();
+    const store = new Map();
+    const session = {
+        setItem(k, v) { store.set(k, String(v)); },
+        getItem(k) { return store.has(k) ? store.get(k) : null; },
+        removeItem(k) { store.delete(k); }
+    };
+    const flow = createUpdateFlow({
+        navigator: { serviceWorker: container, onLine: true },
+        loader,
+        session
+    });
+    let ready = 0;
+
+    await flow.start(() => { ready++; });
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    assert.equal(ready, 1);
+    assert.equal(store.get('cognitive:post-update-reload'), '1');
+    // Exactly one show: boot. The install reloads, so it must not add another.
+    assert.equal(loader.counts().shown, 1);
+});
+
+test('a late duplicate completion still takes the loader down', async function () {
+    const first = createWorker('activated');
+    const registration = createRegistration(first);
+    const second = createWorker('activated');
+    let calls = 0;
+    registration.update = async function () {
+        this.updateCalls++;
+        calls++;
+        if (calls === 1) return;
+        this.installing = second;
+        this.active = second;
+        this.emit('updatefound');
+    };
+    const container = createServiceWorkerContainer(registration);
+    // No controller => this install completes in place instead of reloading, so
+    // it does show a loader and must take it down again on completion.
+    container.controller = null;
+    const loader = createLoader();
+    const flow = createUpdateFlow({
+        navigator: { serviceWorker: container, onLine: true },
+        loader
+    });
+    let ready = 0;
+
+    await flow.start(() => { ready++; });
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    assert.equal(ready, 1);
+    assert.equal(loader.counts().shown, loader.counts().hidden);
+});
+
 test('no update reload leaves no marker behind', async function () {
     const worker = createWorker('activated');
     const registration = createRegistration(worker);
@@ -303,7 +374,10 @@ test('update found away from home is deferred until returning home', async funct
     await new Promise(resolve => setImmediate(resolve));
 
     assert.equal(reloads, 1);
-    assert.equal(loader.counts().shown, 2);
+    // The deferred install ends in a reload, so it no longer paints its own
+    // progress bar - anything it drew would be thrown away with the page, and
+    // it was the second bar users reported. Only boot shows one.
+    assert.equal(loader.counts().shown, 1);
 });
 
 test('router home entry installs a deferred update', async function () {
@@ -335,7 +409,7 @@ test('router home entry installs a deferred update', async function () {
     router.enterHome();
     await new Promise(resolve => setImmediate(resolve));
 
-    assert.equal(loader.counts().shown, 2);
+    assert.equal(loader.counts().shown, 1);
 });
 test('progress bar stays below 100 until the update is fully active', async function () {
     const oldWorker = createWorker('activated');

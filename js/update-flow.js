@@ -89,7 +89,13 @@
                 clearTimeoutRef(bootTimer);
                 bootTimer = null;
             }
-            if (ready) return;
+            if (ready) {
+                // A late duplicate completion still owns a loader it may have
+                // just shown (e.g. a mid-session update install that finishes
+                // after boot already completed). Never leave it on screen.
+                hideLoader();
+                return;
+            }
             ready = true;
 
             // Always finish the bar. This used to be gated on `success`, but that
@@ -207,7 +213,12 @@
         function installPendingUpdate(registration, shouldReload) {
             pendingUpdate = false;
             pendingUpdateReload = false;
-            showLoader();
+            // When this install ends in a reload, anything we draw here is thrown
+            // away: the page is replaced and the boot that follows skips the
+            // loader entirely. Showing it anyway is the second bar users see -
+            // it fills to 100% over a home screen that is already working, then
+            // the page reloads. Only show progress for installs that stay put.
+            if (!shouldReload) showLoader();
             return finishWorkerUpdate(registration, shouldReload)
                 .catch(function () {
                     complete();
