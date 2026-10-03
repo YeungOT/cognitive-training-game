@@ -133,6 +133,19 @@ async function main() {
         await send('Runtime.enable');
         await send('Log.enable');
 
+        // The app precaches every asset behind a service worker, and a freshly
+        // generated sw.js only activates after the page has loaded once - so a
+        // single navigation can measure stale CSS and silently pass. Drop the
+        // worker and its caches before measuring.
+        await send('Emulation.setDeviceMetricsOverride', {
+            width: VIEWPORTS[0].w, height: VIEWPORTS[0].h, deviceScaleFactor: 1, mobile: false
+        });
+        await send('Page.navigate', { url: appUrl });
+        await delay(2200);
+        await evaluate("(async () => { const rs = await navigator.serviceWorker.getRegistrations(); for (const r of rs) { await r.unregister(); } const ks = await caches.keys(); for (const k of ks) { await caches.delete(k); } return 1; })()");
+        await send('Page.reload');
+        await delay(2200);
+
         for (const vp of VIEWPORTS) {
             await send('Emulation.setDeviceMetricsOverride', {
                 width: vp.w, height: vp.h, deviceScaleFactor: 1, mobile: false

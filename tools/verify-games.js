@@ -122,6 +122,26 @@ async function main() {
     }
     await delay(600); // let self-mounts + main.js settle
 
+    // The app precaches every asset behind a service worker, and a freshly
+    // generated sw.js only activates after the page has loaded once - so the
+    // checks above can run against stale CSS/JS and pass anyway. Drop the
+    // worker and its caches, then reload, so this always tests current files.
+    await evaluate(`(async () => {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) { await reg.unregister(); }
+      const keys = await caches.keys();
+      for (const key of keys) { await caches.delete(key); }
+      return true;
+    })()`).catch(() => null);
+    await send('Page.reload');
+    const reloadStart = Date.now();
+    while (Date.now() - reloadStart < 30000) {
+      const ready = await evaluate(`({ ready: document.readyState, hasRouter: !!window.CognitiveRouter, hasData: !!window.CognitiveFoodData })`).catch(() => null);
+      if (ready && ready.ready === 'complete' && ready.hasRouter && ready.hasData) break;
+      await delay(300);
+    }
+    await delay(600);
+
     // ---------------- food ----------------
     await check('food: category select screen renders buttons', async () => {
       await nav('foodCategorySelect');
@@ -346,15 +366,22 @@ async function main() {
     });
     await check('palm: swap mirrors left and right gestures', async () => {
       const read = `(() => { const l = document.querySelector('#leftGesture img'), r = document.querySelector('#rightGesture img'); return (l && r) ? l.src + '|' + r.src : ''; })()`;
-      const before = await evaluate(read);
-      await clickSel('#swapBtn');
-      await delay(400);
-      const after = await evaluate(read);
-      const [beforeL, beforeR] = before.split('|');
-      const [afterL, afterR] = after.split('|');
-      return before !== '' && before !== after &&
-        beforeL.replace('/left/', '/right/') === afterR &&
-        beforeR.replace('/right/', '/left/') === afterL;
+      // Gestures are picked at random, so the two hands sometimes show the same
+      // image and a swap is then unobservable. Retry until a swap actually moves
+      // something rather than asserting on a single sample.
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const before = await evaluate(read);
+        await clickSel('#swapBtn');
+        await delay(400);
+        const after = await evaluate(read);
+        if (before === '' || before === after) continue;
+        const [beforeL, beforeR] = before.split('|');
+        const [afterL, afterR] = after.split('|');
+        if (beforeL.replace('/left/', '/right/') === afterR &&
+            beforeR.replace('/right/', '/left/') === afterL) return true;
+        return false;
+      }
+      return false;
     });
     await check('palm: play toggles autoplay', async () => {
       await clickSel('#playBtn');

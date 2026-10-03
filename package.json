@@ -7,7 +7,8 @@
     "build:sw": "node tools/generate-service-worker.js",
     "test": "node --test",
     "verify:parity": "node tools/verify-parity.js",
+    "verify:layout": "node tools/verify-layout.js",
     "verify:games": "node tools/verify-games.js",
-    "verify": "npm run test && npm run verify:parity && npm run verify:games"
+    "verify": "npm run test && npm run verify:parity && npm run verify:layout && npm run verify:games"
   }
 }
