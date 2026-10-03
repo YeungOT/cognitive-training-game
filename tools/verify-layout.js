@@ -30,9 +30,10 @@ const VIEWPORTS = [
 ];
 
 // group 'composer' screens are built by the shared Game Screen, so their
-// top-bar / stage / footer heights must match each other exactly. realityBoard
-// is still on the legacy static-markup path and is measured for its own sanity
-// only - it is the remaining migration gap.
+// top-bar height must match. realityBoard is on the legacy static-markup path
+// BY DECISION (2026-10-03, user) and is not being migrated, so it is measured
+// for its own sanity only and excluded from cross-screen parity. That is a
+// permanent grouping, not a migration backlog.
 const SCREENS = [
     { name: 'palm', group: 'composer', steps: ["CognitiveRouter.navigate('palm')"] },
     { name: 'gng', group: 'composer', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameGngBtn').click()", "document.getElementById('gngStartBtn').click()"] },
