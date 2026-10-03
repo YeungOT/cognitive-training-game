@@ -51,8 +51,14 @@ S.push('      const visible = el => { const r = el.getBoundingClientRect(); retu
 S.push('      const tick = () => {');
 S.push('        const t0 = performance.now();');
 S.push('        if (state.initSeen && !loader.classList.contains("hidden") && visible(loader)) state.loaderAfterInit = true;');
-S.push('        const w = bar.style.width || "0%";');
-S.push('        if (state.bars.length === 0 || state.bars[state.bars.length - 1] !== w) state.bars.push(w);');
+S.push('        // Only sample the bar while the loader is on screen. An update that');
+S.push('        // installs after boot still rewrites bar.style.width on a hidden');
+S.push('        // loader, and that is not something the user can see.');
+S.push('        const loaderUp = !loader.classList.contains("hidden") && visible(loader);');
+S.push('        if (loaderUp) {');
+S.push('          const w = bar.style.width || "0%";');
+S.push('          if (state.bars.length === 0 || state.bars[state.bars.length - 1] !== w) state.bars.push(w);');
+S.push('        }');
 S.push('        if (!state.initSeen) {');
 S.push('          const off = [...document.querySelectorAll(".app-screen")].filter(s => !s.classList.contains("hidden") && visible(s) && s.id !== "home").map(s => s.id);');
 S.push('          if (off.length) state.preInitViolations.push({ id: off[0], t: Math.round(t0) });');
@@ -71,6 +77,32 @@ S.push('    attach();');
 S.push('  } catch (e) {}');
 S.push('  return true;');
 S.push('})()');
+
+// Fault injection for the update leg. installPendingUpdate() is only reachable
+// when the STARTUP update check misses an update that a LATER check finds, which
+// is a race a plain leg never wins. Making the first registration.update() a
+// no-op forces that ordering deterministically, so the real path runs and the
+// "loader never reappears after boot" assertion actually covers it.
+const F = [];
+F.push('(() => {');
+F.push('  try {');
+F.push('    if (sessionStorage.getItem("__bootFault") !== "1") return true;');
+F.push('    const sw = navigator.serviceWorker;');
+F.push('    const origRegister = sw.register.bind(sw);');
+F.push('    sw.register = async function (url, opts) {');
+F.push('      const reg = await origRegister(url, opts);');
+F.push('      const origUpdate = reg.update.bind(reg);');
+F.push('      let calls = 0;');
+F.push('      reg.update = function () {');
+F.push('        calls++;');
+F.push('        if (calls === 1) return Promise.resolve();');
+F.push('        return origUpdate();');
+F.push('      };');
+F.push('      return reg;');
+F.push('    };');
+F.push('  } catch (e) {}');
+F.push('  return true;');
+F.push('})()');
 
 function copyApp() {
   const skip = new Set(['.git', 'node_modules']);
@@ -179,6 +211,7 @@ async function main() {
     await send('Page.enable'); await send('Runtime.enable');
     await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
     await send('Page.addScriptToEvaluateOnNewDocument', { source: S.join('\n') });
+    await send('Page.addScriptToEvaluateOnNewDocument', { source: F.join('\n') });
 
     const visit = async (ms, reset) => {
       // The first leg must NOT reset: navigating from about:blank is the only way
@@ -200,6 +233,7 @@ async function main() {
     // Publish a new build in the temp copy only.
     fs.appendFileSync(path.join(appDir, 'README.md'), '\n<!-- boot gate update leg -->\n');
     spawnSync(process.execPath, [path.join(appDir, 'tools', 'generate-service-worker.js')], { cwd: appDir, stdio: 'ignore' });
+    await ev("(() => { try { sessionStorage.setItem('__bootFault', '1'); } catch (e) {} })()");
 
     checkLeg('update', await visit(16000), true);
 
