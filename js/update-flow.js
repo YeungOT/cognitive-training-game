@@ -21,6 +21,12 @@
         // 進度條封頂：precache 完成後還有 activation，先停在 95%，真正完成才顯示 100%
         var progressCapPercent = adapters.progressCapPercent != null ? adapters.progressCapPercent : 95;
         var firstInstallWaitMs = adapters.firstInstallWaitMs || 3000;
+        // The progress bar animates its width over 0.16s. Hiding the loader in
+        // the same tick as the final 100% write means that last step is never
+        // painted - the bar jumps from 95% straight to gone. Hold the completed
+        // bar briefly so the finish is actually visible. Set to 0 to hide
+        // synchronously (used by tests).
+        var completionHoldMs = adapters.completionHoldMs != null ? adapters.completionHoldMs : 220;
 
         var started = false;
         var ready = false;
@@ -53,33 +59,46 @@
             if (typeof locationRef.reload === 'function') locationRef.reload();
         }
 
-        function complete(success) {
+        function complete() {
             if (bootTimer && typeof clearTimeoutRef === 'function') {
                 clearTimeoutRef(bootTimer);
                 bootTimer = null;
             }
-            if (success) {
-                setProgress(1, 1);
-            }
-            hideLoader();
             if (ready) return;
             ready = true;
-            var callbacks = pendingCallbacks;
-            pendingCallbacks = [];
-            callbacks.forEach(function (callback) {
-                try {
-                    callback();
-                } catch (error) {
-                    if (consoleRef && typeof consoleRef.error === 'function') {
-                        consoleRef.error('App boot callback failed:', error);
+
+            // Always finish the bar. This used to be gated on `success`, but that
+            // flag had no other reader, so every path which was not a worker
+            // install left the bar at its 0% stylesheet default and the user
+            // watched an empty loader until home appeared - which is every
+            // ordinary repeat visit, and the second boot after an update.
+            setProgress(1, 1);
+
+            function finish() {
+                hideLoader();
+                var callbacks = pendingCallbacks;
+                pendingCallbacks = [];
+                callbacks.forEach(function (callback) {
+                    try {
+                        callback();
+                    } catch (error) {
+                        if (consoleRef && typeof consoleRef.error === 'function') {
+                            consoleRef.error('App boot callback failed:', error);
+                        }
                     }
-                }
-            });
-            var resolvers = readyResolvers;
-            readyResolvers = [];
-            resolvers.forEach(function (resolve) {
-                resolve();
-            });
+                });
+                var resolvers = readyResolvers;
+                readyResolvers = [];
+                resolvers.forEach(function (resolve) {
+                    resolve();
+                });
+            }
+
+            if (completionHoldMs > 0) {
+                setTimeoutRef(finish, completionHoldMs);
+            } else {
+                finish();
+            }
         }
 
         function onProgressMessage(event) {
@@ -181,7 +200,7 @@
                         reloadForUpdate();
                         return;
                     }
-                    complete(true);
+                    complete();
                 });
         }
 

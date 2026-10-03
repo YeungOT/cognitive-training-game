@@ -128,6 +128,54 @@ test('active worker with no update completes boot and starts update checks', asy
     assert.equal(loader.counts().hidden, 1);
     assert.equal(container.listenerCount('message'), 1);
     assert.equal(registration.updateCalls >= 1, true);
+    // Regression: the bar used to be filled only when `complete(true)` ran, i.e.
+    // only on a worker install. On this no-update path it kept the stylesheet's
+    // 0% default, so an ordinary repeat visit showed an empty loader until home.
+    const finalProgress = loader.counts().progress.at(-1);
+    assert.equal(finalProgress[0], 1);
+    assert.equal(finalProgress[1], 1);
+});
+
+test('progress reaches 100% before the loader is hidden', async function () {
+    const worker = createWorker('activated');
+    const registration = createRegistration(worker);
+    const container = createServiceWorkerContainer(registration);
+    const loader = createLoader();
+    const timers = [];
+    const flow = createUpdateFlow({
+        navigator: { serviceWorker: container, onLine: true },
+        loader,
+        setTimeout(fn) {
+            timers.push(fn);
+            return timers.length;
+        },
+        clearTimeout() {}
+    });
+    let ready = 0;
+
+    const started = flow.start(() => {
+        ready++;
+    });
+
+    // Wait until the flow has written 100%. Waiting on timers.length would race:
+    // the startup-update-check timer is pushed earlier and is not the hold.
+    while (loader.counts().progress.length === 0) {
+        await new Promise(resolve => setTimeout(resolve, 5));
+    }
+
+    // The hold is scheduled, not run yet: bar is complete but the loader is still up.
+    const finalProgress = loader.counts().progress.at(-1);
+    assert.equal(finalProgress[0], 1);
+    assert.equal(finalProgress[1], 1);
+    assert.equal(loader.counts().hidden, 0);
+    assert.equal(ready, 0);
+
+    const hold = timers.pop();
+    hold();
+    await started;
+
+    assert.equal(loader.counts().hidden, 1);
+    assert.equal(ready, 1);
 });
 
 test('startup update is installed before boot completes', async function () {

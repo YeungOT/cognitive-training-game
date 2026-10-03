@@ -11,6 +11,10 @@
         loader: {
             show: function () {
                 if (bootLoader) bootLoader.classList.remove('hidden');
+                // The loader can be shown again mid-session when a worker update
+                // lands. Reset the bar so a second cycle never displays the
+                // previous cycle's width.
+                if (bootProgress) bootProgress.style.width = '0%';
             },
             hide: function () {
                 if (bootLoader) bootLoader.classList.add('hidden');
