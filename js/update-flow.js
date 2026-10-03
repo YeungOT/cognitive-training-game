@@ -213,12 +213,13 @@
         function installPendingUpdate(registration, shouldReload) {
             pendingUpdate = false;
             pendingUpdateReload = false;
-            // When this install ends in a reload, anything we draw here is thrown
-            // away: the page is replaced and the boot that follows skips the
-            // loader entirely. Showing it anyway is the second bar users see -
-            // it fills to 100% over a home screen that is already working, then
-            // the page reloads. Only show progress for installs that stay put.
-            if (!shouldReload) showLoader();
+            // Never show the loader from here. The loader belongs to boot alone:
+            // if boot is still running, start() already showed it and calling
+            // show() again would reset a partly-filled bar to 0%; if boot has
+            // finished, this install is a background refresh over a working app
+            // and covering it with a full loading screen reads as the second bar
+            // users reported. An install that ends in a reload discards anything
+            // it might draw anyway, and the boot that follows skips the loader.
             return finishWorkerUpdate(registration, shouldReload)
                 .catch(function () {
                     complete();

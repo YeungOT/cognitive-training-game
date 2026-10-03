@@ -285,6 +285,38 @@ test('an update install that ends in a reload does not show a second loader', as
     assert.equal(loader.counts().shown, 1);
 });
 
+test('an update on an uncontrolled page does not show a second bar', async function () {
+    // controller is null on the first load after a worker registers, before it
+    // claims the client. An update discovered then used to show a second full
+    // progress bar over a home screen that was already working, with no reload.
+    const first = createWorker('activated');
+    const registration = createRegistration(first);
+    const second = createWorker('activated');
+    let calls = 0;
+    registration.update = async function () {
+        this.updateCalls++;
+        calls++;
+        if (calls === 1) return;
+        this.installing = second;
+        this.active = second;
+        this.emit('updatefound');
+    };
+    const container = createServiceWorkerContainer(registration);
+    container.controller = null;
+    const loader = createLoader();
+    const flow = createUpdateFlow({
+        navigator: { serviceWorker: container, onLine: true },
+        loader
+    });
+    let ready = 0;
+
+    await flow.start(() => { ready++; });
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    assert.equal(ready, 1);
+    assert.equal(loader.counts().shown, 1);
+});
+
 test('a late duplicate completion still takes the loader down', async function () {
     const first = createWorker('activated');
     const registration = createRegistration(first);
@@ -313,7 +345,11 @@ test('a late duplicate completion still takes the loader down', async function (
     await new Promise(resolve => setTimeout(resolve, 400));
 
     assert.equal(ready, 1);
-    assert.equal(loader.counts().shown, loader.counts().hidden);
+    // The invariant that matters is that the loader is never left on screen,
+    // not that show and hide are balanced - a duplicate completion may hide an
+    // already-hidden loader.
+    assert.ok(loader.counts().hidden >= loader.counts().shown,
+        'loader left visible: shown ' + loader.counts().shown + ', hidden ' + loader.counts().hidden);
 });
 
 test('no update reload leaves no marker behind', async function () {

@@ -366,15 +366,21 @@ async function main() {
     });
     await check('palm: swap mirrors left and right gestures', async () => {
       const read = `(() => { const l = document.querySelector('#leftGesture img'), r = document.querySelector('#rightGesture img'); return (l && r) ? l.src + '|' + r.src : ''; })()`;
-      // Gestures are picked at random, so the two hands sometimes show the same
-      // image and a swap is then unobservable. Retry until a swap actually moves
-      // something rather than asserting on a single sample.
-      for (let attempt = 0; attempt < 8; attempt++) {
+      // Gestures are random. When both hands happen to show the SAME gesture
+      // (~1 in 8), swapping mirrors the paths back to identical strings, so the
+      // swap is a true no-op and retrying alone can never escape that state.
+      // Reshuffle a hand first, then try the swap again.
+      for (let attempt = 0; attempt < 10; attempt++) {
         const before = await evaluate(read);
+        if (before === '') return false;
         await clickSel('#swapBtn');
         await delay(400);
         const after = await evaluate(read);
-        if (before === '' || before === after) continue;
+        if (before === after) {
+          await clickSel('#leftSide');
+          await delay(400);
+          continue;
+        }
         const [beforeL, beforeR] = before.split('|');
         const [afterL, afterR] = after.split('|');
         if (beforeL.replace('/left/', '/right/') === afterR &&
