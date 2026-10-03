@@ -10,7 +10,8 @@
     "verify:layout": "node tools/verify-layout.js",
     "verify:boot": "node tools/verify-boot.js",
     "verify:edge": "node tools/verify-edge-drag.js",
+    "verify:back": "node tools/verify-back.js",
     "verify:games": "node tools/verify-games.js",
-    "verify": "npm run test && npm run verify:parity && npm run verify:layout && npm run verify:boot && npm run verify:edge && npm run verify:games"
+    "verify": "npm run test && npm run verify:parity && npm run verify:layout && npm run verify:boot && npm run verify:edge && npm run verify:back && npm run verify:games"
   }
 }

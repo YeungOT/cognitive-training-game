@@ -103,8 +103,10 @@
             var speedDown = els.speedDown;
             var leftSide = els.leftSide;
             var rightSide = els.rightSide;
+            var backBtn = els.palmBackBtn;
             if (!leftEl || !rightEl || !swapBtn || !difficultySelect || !handSelect ||
-                !playBtn || !speedDisplay || !speedUp || !speedDown || !leftSide || !rightSide) {
+                !playBtn || !speedDisplay || !speedUp || !speedDown || !leftSide || !rightSide ||
+                !backBtn) {
                 return null;
             }
 
@@ -325,6 +327,15 @@
             }, listenOpts);
             speedDown.addEventListener('click', function () {
                 changeSpeed(-1);
+            }, listenOpts);
+            // Palm has no settings screen, so back means "return to the previous
+            // screen". goBack() pops the router stack and falls back to the
+            // 'back' target declared in defineScreen ('home'), which is the same
+            // path the generic [data-app-back] buttons take.
+            backBtn.addEventListener('click', function () {
+                if (router && typeof router.goBack === 'function') {
+                    router.goBack();
+                }
             }, listenOpts);
 
             if (keyboard) {
