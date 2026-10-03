@@ -119,6 +119,10 @@
             var slideMenu = document.getElementById('slideMenu');
             var slideMenuBackdrop = document.getElementById('slideMenuBackdrop');
             var EDGE_PX = 48;
+            // The scaled edge strip collapses to ~15px on a phone, well under the
+            // 24px tap floor the layout gate enforces. Floor it so the grab area
+            // stays thumb-sized; large screens keep the full scaled width.
+            var EDGE_MIN_PX = 24;
             var DRAG_START_PX = 8;
             var SNAP_RATIO = 0.5;
             var VELOCITY_PX_MS = 0.45;
@@ -137,7 +141,7 @@
             }
 
             function getEdgeWidth() {
-                return EDGE_PX * getUiScale();
+                return Math.max(EDGE_MIN_PX, EDGE_PX * getUiScale());
             }
 
             function getMenuWidth() {
