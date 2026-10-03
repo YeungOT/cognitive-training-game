@@ -208,6 +208,64 @@ test('startup update is installed before boot completes', async function () {
     assert.equal(loader.counts().hidden, 1);
 });
 
+test('an update reload marks the next boot so the loader can be skipped', async function () {
+    const oldWorker = createWorker('activated');
+    const registration = createRegistration(oldWorker);
+    const newWorker = createWorker('activated');
+    registration.update = async function () {
+        this.updateCalls++;
+        this.installing = newWorker;
+        this.active = newWorker;
+        this.emit('updatefound');
+    };
+    const container = createServiceWorkerContainer(registration);
+    // A controlled page is what makes the flow reload rather than complete.
+    container.controller = {};
+    const loader = createLoader();
+    const store = new Map();
+    const session = {
+        setItem(k, v) { store.set(k, String(v)); },
+        getItem(k) { return store.has(k) ? store.get(k) : null; },
+        removeItem(k) { store.delete(k); }
+    };
+    const flow = createUpdateFlow({
+        navigator: { serviceWorker: container, onLine: true },
+        loader,
+        session
+    });
+
+    // The reload path returns without completing, so start()'s promise never
+    // resolves (the real page is navigating away). Do not await it.
+    flow.start(() => {});
+    while (!store.has('cognitive:post-update-reload')) {
+        await new Promise(resolve => setTimeout(resolve, 5));
+    }
+
+    assert.equal(store.get('cognitive:post-update-reload'), '1');
+    assert.equal(flow.POST_UPDATE_RELOAD_KEY, 'cognitive:post-update-reload');
+});
+
+test('no update reload leaves no marker behind', async function () {
+    const worker = createWorker('activated');
+    const registration = createRegistration(worker);
+    const container = createServiceWorkerContainer(registration);
+    const store = new Map();
+    const session = {
+        setItem(k, v) { store.set(k, String(v)); },
+        getItem(k) { return store.has(k) ? store.get(k) : null; },
+        removeItem(k) { store.delete(k); }
+    };
+    const flow = createUpdateFlow({
+        navigator: { serviceWorker: container, onLine: true },
+        loader: createLoader(),
+        session
+    });
+
+    await flow.start(() => {});
+
+    assert.equal(store.size, 0);
+});
+
 test('update found away from home is deferred until returning home', async function () {
     const worker = createWorker('activated');
     const registration = createRegistration(worker);

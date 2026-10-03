@@ -1,6 +1,12 @@
 (function (global) {
     'use strict';
 
+    // Set just before an update reload so the boot that follows knows it is a
+    // refresh rather than a cold start. Without it the progress bar appears
+    // twice: it fills on the first document, the page reloads to hand control to
+    // the new worker, and the bar restarts from 0% on the second.
+    var POST_UPDATE_RELOAD_KEY = 'cognitive:post-update-reload';
+
     function createUpdateFlow(adapters) {
         adapters = adapters || {};
 
@@ -27,6 +33,8 @@
         // bar briefly so the finish is actually visible. Set to 0 to hide
         // synchronously (used by tests).
         var completionHoldMs = adapters.completionHoldMs != null ? adapters.completionHoldMs : 220;
+        var postUpdateReloadKey = adapters.postUpdateReloadKey || POST_UPDATE_RELOAD_KEY;
+        var sessionRef = adapters.session || (typeof sessionStorage !== 'undefined' ? sessionStorage : null);
 
         var started = false;
         var ready = false;
@@ -56,7 +64,24 @@
         function reloadForUpdate() {
             if (reloading) return;
             reloading = true;
+            // complete() never runs on this path, so clear the boot fallback
+            // timer here instead of leaving it pending.
+            if (bootTimer && typeof clearTimeoutRef === 'function') {
+                clearTimeoutRef(bootTimer);
+                bootTimer = null;
+            }
+            markPostUpdateReload();
             if (typeof locationRef.reload === 'function') locationRef.reload();
+        }
+
+        function markPostUpdateReload() {
+            if (!sessionRef) return;
+            try {
+                sessionRef.setItem(postUpdateReloadKey, '1');
+            } catch (error) {
+                // Private mode / disabled storage: the next boot simply shows its
+                // progress bar again, which is the old behaviour.
+            }
         }
 
         function complete() {
@@ -383,7 +408,8 @@
         return {
             start: start,
             enterHome: enterHome,
-            close: close
+            close: close,
+            POST_UPDATE_RELOAD_KEY: postUpdateReloadKey
         };
     }
 
@@ -395,7 +421,8 @@
 
     if (typeof global !== 'undefined') {
         global.CognitiveUpdateFlow = {
-            createUpdateFlow: createUpdateFlow
+            createUpdateFlow: createUpdateFlow,
+            POST_UPDATE_RELOAD_KEY: POST_UPDATE_RELOAD_KEY
         };
     }
 })(typeof window !== 'undefined' ? window : globalThis);
