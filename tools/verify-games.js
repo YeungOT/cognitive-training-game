@@ -339,12 +339,16 @@ async function main() {
           && !!p.querySelector('#playBtn') && p.classList.contains('game-screen');
       })()`) === true;
     });
+    // This used to also assert `!!p.querySelector('#palmBackBtn')`. That was
+    // presence-only and is exactly why a dead back button shipped: the button
+    // existed in the DOM and did nothing when pressed. Back-button BEHAVIOUR is
+    // asserted in tools/verify-back.js, which clicks each one for real.
     await check('palm: top bar keeps its own chrome (no score, no separator)', async () => {
       return await evaluate(`(() => {
         const p = document.getElementById('palm');
         return !p.querySelector('.score-display') && !p.querySelector('.separator')
           && !!p.querySelector('#difficultySelect') && !!p.querySelector('#handSelect')
-          && !!p.querySelector('#palmMenuBtn') && !!p.querySelector('#palmBackBtn');
+          && !!p.querySelector('#palmMenuBtn');
       })()`) === true;
     });
     await check('palm: speed +/- change the level', async () => {

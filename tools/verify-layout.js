@@ -85,6 +85,29 @@ const METRIC = "(() => {"
     + "   top:box(kids[0]), stage:box(kids[1]), bottom:box(kids[2]), small:small };"
     + "})()";
 
+// A screen must be measured only once it has settled. Settling means three
+// things, all required: no `cognitive-screen-transition` on the body, exactly
+// one visible screen, and that same screen still visible on a second sample
+// (which also lets settings-layout.js finish its rAF class toggling).
+//
+// WHY THIS IS A GUARD AND NOT A ROOT-CAUSE FIX -- read before trusting it:
+// this gate failed once on `iphone-se/food` ("top region overlaps the stage by
+// 38px", top-bar 38 instead of 41.8) and then passed on identical code. Two
+// candidate causes were measured and BOTH DISPROVED:
+//   (a) "METRIC picks the outgoing screen because transitions keep two screens
+//       non-hidden" -- false: a per-frame probe never saw more than one visible
+//       screen across the whole navigation.
+//   (b) "`cognitive-screen-transition` forces `position: fixed; inset: 0` and
+//       changes the measured geometry" -- false: sampling foodGame every 25ms
+//       across the transition boundary gave byte-identical boxes before and
+//       after (top y2.8 h41.8, stage y44.6).
+// So the original flake remains UNEXPLAINED. What this buys is that the gate no
+// longer depends on fixed delays being long enough, and it fails loudly rather
+// than silently measuring a moving layout. Failure messages now include the
+// measured screen id and both boxes, so a recurrence is diagnosable instead of
+// requiring another lucky reproduction.
+const SETTLE_STATE = "(() => { const vis = [...document.querySelectorAll('.app-screen')].filter(x => !x.classList.contains('hidden') && x.getClientRects().length > 0); return { n: vis.length, ids: vis.map(x => x.id).join(','), transitioning: document.body.classList.contains('cognitive-screen-transition') }; })()";
+
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function fail(msg) { failures.push(msg); console.log('FAIL - ' + msg); }
@@ -152,6 +175,20 @@ async function main() {
             return result.result.value;
         }
 
+        // See SETTLE_STATE above for why a fixed delay is not enough.
+        async function settleLayout() {
+            for (let i = 0; i < 50; i++) {
+                const s = await evaluate(SETTLE_STATE).catch(() => null);
+                if (s && s.n === 1 && !s.transitioning) {
+                    await delay(120);
+                    const again = await evaluate(SETTLE_STATE).catch(() => null);
+                    if (again && again.n === 1 && !again.transitioning && again.ids === s.ids) return true;
+                }
+                await delay(120);
+            }
+            return false;
+        }
+
         await send('Page.enable');
         await send('Runtime.enable');
         await send('Log.enable');
@@ -190,6 +227,10 @@ async function main() {
                 await evaluate("(() => { if (window.CognitiveMessage) window.CognitiveMessage.dismiss(); return 1; })()");
                 await delay(550);
 
+                if (!await settleLayout()) {
+                    fail(vp.name + '/' + screen.name + ': the screen never settled (more than one visible screen, or a transition never finished)');
+                    continue;
+                }
                 const m = await evaluate(METRIC);
                 if (!m || !m.top || !m.stage || !m.bottom) {
                     fail(vp.name + '/' + screen.name + ': could not measure the screen regions');
@@ -204,7 +245,7 @@ async function main() {
                 //    full-bleed container, not a region stacked between siblings.
                 if (screen.group === 'composer') {
                     if (m.top.b - m.stage.y > TOL) {
-                        fail(vp.name + '/' + screen.name + ': top region overlaps the stage by ' + (m.top.b - m.stage.y) + 'px');
+                        fail(vp.name + '/' + screen.name + ': top region overlaps the stage by ' + (m.top.b - m.stage.y) + 'px (measured screen=' + m.screen + ' top=' + JSON.stringify(m.top) + ' stage=' + JSON.stringify(m.stage) + ')');
                     }
                     if (m.stage.b - m.bottom.y > TOL) {
                         fail(vp.name + '/' + screen.name + ': stage overlaps the bottom region by ' + (m.stage.b - m.bottom.y) + 'px');
