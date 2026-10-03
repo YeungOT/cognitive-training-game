@@ -777,7 +777,6 @@
             .save-btn,
             .reality-edit-btn,
             .magnify-btn,
-            .play-btn,
             .speed-btn {
                 min-width: var(--tap-min);
                 min-height: var(--tap-min);
@@ -820,7 +819,6 @@
                 height: 38px;
             }
             .magnify-btn,
-            .play-btn,
             .speed-btn {
                 min-width: 34px;
                 min-height: 34px;
@@ -873,7 +871,8 @@
                 min-width: 38px;
                 max-height: none;
             }
-            .play-btn,
+            /* The -/+ glyphs stay compact inside the pill; the play button is
+               bound to --row-action-h in gng.css and must not be re-pinned here. */
             .speed-btn {
                 width: 34px;
                 height: 34px;

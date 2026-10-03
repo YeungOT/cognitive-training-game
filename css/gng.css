@@ -195,8 +195,8 @@
 
         /* 播放按鈕 (共用) */
         .play-btn {
-            width: max(var(--tap-min), calc(47px * var(--ui-scale)));
-            height: max(var(--tap-min), calc(47px * var(--ui-scale)));
+            width: var(--row-action-h);
+            height: var(--row-action-h);
             border: none;
             border-radius: 50%;
             background: var(--nback-brown);
