@@ -151,11 +151,11 @@
     transition: var(--btn-transition);
     font-family: inherit;
     -webkit-tap-highlight-color: transparent;
-    height: calc(56px * var(--ui-scale));
+    height: var(--row-action-h);
+    min-width: var(--row-action-min-w);
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: calc(110px * var(--ui-scale));
 }
 .dual-match-controls .dual-match-btn:hover {
     background: var(--btn-hover-correct);

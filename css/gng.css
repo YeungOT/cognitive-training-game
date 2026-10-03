@@ -283,11 +283,11 @@
             transition: var(--btn-transition);
             font-family: inherit;
             -webkit-tap-highlight-color: transparent;
-            height: calc(60px * var(--ui-scale));
+            height: var(--row-action-h);
+            min-width: var(--row-action-min-w);
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: calc(140px * var(--ui-scale));
             box-shadow: 0 calc(6px * var(--ui-scale)) 0 rgba(0,0,0,0.2);
         }
         .nback-controls .match-btn {
@@ -326,11 +326,11 @@
             transition: var(--btn-transition);
             font-family: inherit;
             -webkit-tap-highlight-color: transparent;
-            height: calc(60px * var(--ui-scale));
+            height: var(--row-action-h);
+            min-width: var(--row-action-min-w);
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: calc(80px * var(--ui-scale));
             box-shadow: 0 calc(6px * var(--ui-scale)) 0 rgba(0,0,0,0.2);
         }
         .gng-controls .go-btn {

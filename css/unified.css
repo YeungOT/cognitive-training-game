@@ -223,7 +223,7 @@
            Only genuinely Palm-specific selectors remain: #swapBtn (no other game
            has it) and the gesture-board layout below. */
         #palm #swapBtn {
-            height: calc(60px * var(--ui-scale));
+            height: var(--row-action-h);
             background: var(--btn-bg);
             border: none;
             color: var(--btn-text);
@@ -237,7 +237,7 @@
             cursor: pointer;
             touch-action: manipulation;
             width: auto;
-            min-width: calc(60px * var(--ui-scale));
+            min-width: var(--row-action-min-w);
             letter-spacing: calc(0.5px * var(--ui-scale));
             line-height: 1.2;
             box-shadow: var(--btn-shadow);
@@ -794,7 +794,10 @@
 
             :root {
                 --top-bar-h: 38px;
-                --control-h: 32px;
+                /* --control-h is intentionally not overridden here: it now
+                   resolves to var(--row-action-h), which floors at the 38px
+                   phone action height. Pinning a separate 32px here is what
+                   let the speed control drift away from the action bar. */
                 --safe-cap-left: 10px;
                 --safe-cap-right: 10px;
                 --safe-cap-bottom: 0px;  /* 手機橫屏：安全區域上限（裝置回報值超過即截斷） */
@@ -870,35 +873,10 @@
                 min-width: 38px;
                 max-height: none;
             }
-            .speed-control {
-                height: 38px;
-            }
             .play-btn,
             .speed-btn {
                 width: 34px;
                 height: 34px;
-            }
-            /* Primary answer controls: GNG go/no-go, N-back match, dual N-back
-               modality, and Palm's swap. These are the most-pressed controls in
-               the app, yet their base height of 56-60px * --ui-scale collapsed
-               them to 26-28px on an iPhone SE — smaller than the play/pause button
-               beside them. Pin to the same 38px used for the rest of the phone
-               chrome so the primary action is never the smallest target.
-               #palm #swapBtn must be listed explicitly: its own ID-scoped
-               height/min-width rules outrank anything set here by class. */
-            .gng-controls .go-btn,
-            .gng-controls .nogo-btn,
-            .nback-controls .match-btn,
-            .nback-controls .notmatch-btn,
-            .dual-match-controls .dual-match-btn,
-            #palm #swapBtn {
-                height: 38px;
-                min-height: 38px;
-                /* 88px sits above the widest natural label (不相同, 87px), so the
-                   pair renders evenly instead of 75/87, and gives the emoji-only
-                   GNG pair a real target. The footer grid is 1fr auto 1fr, so the
-                   group simply absorbs width from the empty side columns. */
-                min-width: 88px;
             }
             .bottom-controls {
                 border-top: none;

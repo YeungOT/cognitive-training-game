@@ -17,7 +17,14 @@
             --avail-w: calc(100vw - var(--safe-left) - var(--safe-right));
             --avail-h: calc(100vh - var(--safe-top) - var(--safe-bottom));
             --top-bar-h: max(var(--tap-min), calc(48px * var(--ui-scale)));
-            --control-h: max(var(--tap-min), calc(47px * var(--ui-scale)));
+            /* Bottom control row: one spec shared by phone and larger screens.
+               The primary action height scales with --ui-scale but never drops
+               below the 38px phone floor, and the speed control is bound to it so
+               the two cannot drift apart at any viewport. The width floor grows
+               with the viewport rather than staying pinned at the phone value. */
+            --row-action-h: max(38px, calc(60px * var(--ui-scale)));
+            --row-action-min-w: max(88px, calc(88px * var(--ui-scale)));
+            --control-h: var(--row-action-h);
             --stage-avail-w: calc(var(--avail-w) - calc(24px * var(--ui-scale)));
             --stage-extra-h: calc(var(--top-bar-h) + var(--control-h) + calc(24px * var(--ui-scale)));
             --stage-inner-extra-h: 0px;
