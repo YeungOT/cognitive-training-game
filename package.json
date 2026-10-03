@@ -5,6 +5,9 @@
   "scripts": {
     "serve": "node tools/serve.js",
     "build:sw": "node tools/generate-service-worker.js",
-    "test": "node --test"
+    "test": "node --test",
+    "verify:parity": "node tools/verify-parity.js",
+    "verify:games": "node tools/verify-games.js",
+    "verify": "npm run test && npm run verify:parity && npm run verify:games"
   }
 }

@@ -127,9 +127,6 @@
     box-shadow: var(--feedback-wrong-glow);
 }
 
-#dualNbackGame .bottom-controls {
-    grid-template-columns: 1fr auto 1fr;
-}
 #dualNbackGame .bottom-controls .center-group {
     min-width: 0;
 }
