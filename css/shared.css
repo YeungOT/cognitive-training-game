@@ -162,7 +162,7 @@
             width: 100%;
             max-width: calc(900px * var(--ui-scale));
             text-align: center;
-            margin-bottom: var(--screen-gap-sm);
+            margin-bottom: var(--screen-title-gap);
             flex-shrink: 0;
             position: relative;
         }

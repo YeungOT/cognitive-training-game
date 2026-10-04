@@ -45,7 +45,15 @@
             --chrome-left: calc(14px * var(--ui-scale) + var(--safe-left));
             --chrome-right: calc(14px * var(--ui-scale) + var(--safe-right));
             --chrome-size: max(38px, calc(44px * var(--ui-scale)));
-            --screen-gap-sm: calc(8px * var(--ui-scale));
+            /* Space between a screen's title and the content under it. Scales
+               with viewport height rather than --ui-scale: the old
+               `8px * --ui-scale` collapsed to ~3.9px on a 390px-tall phone, so
+               the title read as touching the tiles. The floor keeps it readable
+               on small screens and the cap stops it ballooning on tall ones.
+               Applies to every menu and settings screen (including
+               realitySettings) because both header rules consume this one token.
+               Game screens are unaffected -- they use .top-bar, not .menu-header. */
+            --screen-title-gap: clamp(16px, 3vh, 32px);
             --screen-gap-md: calc(24px * var(--ui-scale));
             --screen-pad-y: clamp(12px, 4vh, 28px);
             --grid-gap-2: calc(18px * var(--ui-scale));

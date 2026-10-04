@@ -644,7 +644,7 @@
         .settings-screen {
             --settings-screen-pad-y: var(--screen-pad-y);
             --settings-screen-pad-bottom: var(--screen-pad-y);
-            --settings-header-gap: var(--screen-gap-sm);
+            --settings-header-gap: var(--screen-title-gap);
             --settings-subtitle-gap: var(--screen-gap-md);
             --settings-options-gap: calc(18px * var(--ui-scale));
             --settings-actions-gap: var(--settings-options-gap);
