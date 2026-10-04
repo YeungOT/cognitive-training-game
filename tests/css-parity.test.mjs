@@ -23,6 +23,50 @@ const SHARED_ROW_CLASSES = [
     'bottom-controls'
 ];
 
+// Added after two real bugs slipped past the checks above. Both were the same
+// shape: a more specific selector silently overrode a shared value, so the
+// change landed on some screens and not others, and nothing complained.
+//   - #mainMenu/.foodCategorySelect/.nbackModeSelect and .home-header pinned
+//     their own title gap, so --screen-title-gap never reached the tile screens
+//     (an ID selector outranks a class selector).
+//   - .reality-edit-btn was omitted from the phone rule sizing .back-btn and
+//     .hamburger-btn, so it rendered 44px beside two 38px buttons.
+// Each test below encodes one of those, so the CLASS of bug cannot recur
+// quietly even where the specific instance is fixed.
+
+test('every title gap consumes --screen-title-gap', function () {
+    const offenders = [];
+    // Any rule block whose selector mentions a header, and whose body sets a
+    // margin-bottom, must use the token rather than its own number.
+    const re = /([^{}]*menu-header[^{}]*)\{([^}]*)\}/g;
+    let m;
+    while ((m = re.exec(allCss)) !== null) {
+        const selector = m[1].trim().replace(/\s+/g, ' ');
+        // ":not(.menu-header)" styles OTHER elements (the content row below the
+        // header) and is not a header gap at all.
+        if (selector.includes(':not(.menu-header)')) continue;
+        const body = m[2];
+        const mb = body.match(/margin-bottom:\s*([^;]+);/);
+        if (!mb) continue;
+        // --settings-header-gap is a declared alias of --screen-title-gap, so
+        // consuming it is consuming the same token.
+        if (!mb[1].includes('--screen-title-gap') && !mb[1].includes('--settings-header-gap')) {
+            offenders.push(selector + ' { margin-bottom: ' + mb[1].trim() + ' }');
+        }
+    }
+    assert.deepEqual(offenders, [],
+        'title gaps must come from --screen-title-gap so every titled screen moves together: ' + offenders.join(' | '));
+});
+
+test('the reality edit button is sized by the same rule as the menu buttons', function () {
+    const unified = readFileSync(join(cssDir, 'unified.css'), 'utf8');
+    // Whatever rule gives .back-btn/.hamburger-btn their phone size must name
+    // .reality-edit-btn too, otherwise it falls back to whatever width another
+    // stylesheet computes and silently stops matching its neighbours.
+    assert.match(unified, /\.hamburger-btn,[\s\S]{0,200}?\.action-btn\.reality-edit-btn\s*\{/,
+        '.reality-edit-btn must appear in the same selector list as .hamburger-btn in unified.css');
+});
+
 test('no game scopes a shared bottom-row control with an ID selector', function () {
     const offenders = [];
     for (const cls of SHARED_ROW_CLASSES) {
