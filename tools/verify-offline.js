@@ -3,7 +3,11 @@ const path = require('path');
 const { launch, delay } = require('./lib/cdp-harness');
 
 const root = path.resolve(__dirname, '..');
-const appUrl = process.env.APP_URL || 'http://localhost:4173/';
+// 4187, not 4173: verify-games owns 4173. Sharing was safe only because the
+// chain runs sequentially, and a port collision between two gates is exactly
+// the kind of coupling that breaks the moment one of them is run alone or in
+// parallel.
+const appUrl = process.env.APP_URL || 'http://localhost:4187/';
 const port = Number(process.env.CDP_PORT || 9333);
 
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
@@ -26,7 +30,7 @@ async function main() {
     // That is why it rotted: it was not wired into `npm run verify`, so nothing
     // noticed. launch() owns the server now, so the gate is self-contained.
     browser = await launch({
-      servePort: new URL(appUrl).port || '4173',
+      servePort: new URL(appUrl).port || '4187',
       cdpPort: port,
       appUrl: appUrl,
       profilePrefix: 'cognitive-offline',
