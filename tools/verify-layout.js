@@ -34,12 +34,20 @@ const VIEWPORTS = [
 // BY DECISION (2026-10-03, user) and is not being migrated, so it is measured
 // for its own sanity only and excluded from cross-screen parity. That is a
 // permanent grouping, not a migration backlog.
+// `expect` is the screen id that must be visible before anything is measured.
+// It is not optional bookkeeping: the gate once measured `foodCategorySelect`
+// instead of `foodGame` because a preceding click had not taken effect yet, and
+// reported a bogus "top region overlaps the stage by 38px". foodCategorySelect
+// is not a composer screen -- its children are [top-bar, category-grid], so its
+// second child sits at the same y as the top bar, which reproduces that exact
+// 38px overlap and its exact 38px top-bar height. Measuring the wrong screen
+// produces numbers indistinguishable from a real layout bug.
 const SCREENS = [
-    { name: 'palm', group: 'composer', steps: ["CognitiveRouter.navigate('palm')"] },
-    { name: 'gng', group: 'composer', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameGngBtn').click()", "document.getElementById('gngStartBtn').click()"] },
-    { name: 'nback', group: 'composer', steps: ["CognitiveRouter.navigate('nbackModeSelect')", "document.getElementById('singleNbackBtn').click()"] },
+    { name: 'palm', group: 'composer', expect: 'palm', steps: ["CognitiveRouter.navigate('palm')"] },
+    { name: 'gng', group: 'composer', expect: 'gngGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameGngBtn').click()", "document.getElementById('gngStartBtn').click()"] },
+    { name: 'nback', group: 'composer', expect: 'nbackGame', steps: ["CognitiveRouter.navigate('nbackModeSelect')", "document.getElementById('singleNbackBtn').click()"] },
     {
-        name: 'dual', group: 'composer',
+        name: 'dual', group: 'composer', expect: 'dualNbackGame',
         steps: [
             "CognitiveRouter.navigate('nbackModeSelect')",
             "document.getElementById('dualNbackBtn').click()",
@@ -47,9 +55,9 @@ const SCREENS = [
             "document.getElementById('dualStartBtn').click()"
         ]
     },
-    { name: 'food', group: 'composer', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameFoodBtn').click()", "document.querySelector('#foodCategorySelect .category-btn').click()"] },
+    { name: 'food', group: 'composer', expect: 'foodGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameFoodBtn').click()", "document.querySelector('#foodCategorySelect .category-btn').click()"] },
     {
-        name: 'shopping', group: 'composer',
+        name: 'shopping', group: 'composer', expect: 'shoppingGame',
         steps: [
             "CognitiveRouter.navigate('mainMenu')",
             "document.getElementById('gameShoppingBtn').click()",
@@ -57,9 +65,9 @@ const SCREENS = [
             "document.getElementById('shoppingManualStartBtn').click()"
         ]
     },
-    { name: 'different', group: 'composer', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameDifferentBtn').click()"] },
-    { name: 'pairs', group: 'composer', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gamePairsBtn').click()", "document.getElementById('pairsStartBtn').click()"] },
-    { name: 'reality', group: 'legacy', steps: ["CognitiveRouter.navigate('realityBoard')"] }
+    { name: 'different', group: 'composer', expect: 'differentGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameDifferentBtn').click()"] },
+    { name: 'pairs', group: 'composer', expect: 'pairsGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gamePairsBtn').click()", "document.getElementById('pairsStartBtn').click()"] },
+    { name: 'reality', group: 'legacy', expect: 'realityBoard', steps: ["CognitiveRouter.navigate('realityBoard')"] }
 ];
 
 // Acknowledged, pre-existing violations. They do not fail the gate, but any
@@ -85,15 +93,15 @@ const METRIC = "(() => {"
     + "   top:box(kids[0]), stage:box(kids[1]), bottom:box(kids[2]), small:small };"
     + "})()";
 
-// A screen must be measured only once it has settled. Settling means three
-// things, all required: no `cognitive-screen-transition` on the body, exactly
-// one visible screen, and that same screen still visible on a second sample
-// (which also lets settings-layout.js finish its rAF class toggling).
+// A screen must be measured only once it has settled AND is the screen we asked
+// for. All of: no `cognitive-screen-transition` on the body, exactly one visible
+// screen, that screen's id equal to the entry's `expect`, and the same on a
+// second sample (which also lets settings-layout.js finish its rAF toggling).
 //
-// WHY THIS IS A GUARD AND NOT A ROOT-CAUSE FIX -- read before trusting it:
+// ROOT CAUSE (found later, by matching reported numbers to measured geometry):
 // this gate failed once on `iphone-se/food` ("top region overlaps the stage by
-// 38px", top-bar 38 instead of 41.8) and then passed on identical code. Two
-// candidate causes were measured and BOTH DISPROVED:
+// 38px", top-bar 38 instead of 41.8) and then passed on identical code. Three
+// candidate causes were measured and all DISPROVEN:
 //   (a) "METRIC picks the outgoing screen because transitions keep two screens
 //       non-hidden" -- false: a per-frame probe never saw more than one visible
 //       screen across the whole navigation.
@@ -101,11 +109,27 @@ const METRIC = "(() => {"
 //       changes the measured geometry" -- false: sampling foodGame every 25ms
 //       across the transition boundary gave byte-identical boxes before and
 //       after (top y2.8 h41.8, stage y44.6).
-// So the original flake remains UNEXPLAINED. What this buys is that the gate no
-// longer depends on fixed delays being long enough, and it fails loudly rather
-// than silently measuring a moving layout. Failure messages now include the
-// measured screen id and both boxes, so a recurrence is diagnosable instead of
-// requiring another lucky reproduction.
+//   (c) "METRIC and the settle guard use different visibility predicates, so
+//       they can disagree about which screen is visible" -- false: METRIC tests
+//       only !hidden while the guard also tests getClientRects(), but a
+//       per-frame probe found the two sets identical throughout.
+//   The real cause: the gate measured `foodCategorySelect` instead of
+//   `foodGame`. That screen is not a composer screen -- its children are
+//   [top-bar, category-grid], so its second child sits at the SAME y as the
+//   top bar. Measured: top {y:4.7 h:38 b:42.7}, grid {y:4.7}, giving
+//   42.7 - 4.7 = 38.0px overlap and a 38px top bar. Both reported numbers
+//   reproduce to the decimal. On the intended foodGame the same code measures
+//   top {y:2.8 h:41.8}, stage {y:44.6} -> zero overlap.
+//
+//   116 head-to-head samples of the old fixed-delay strategy against this
+//   settle guard produced zero violations in either, which is what ruled
+//   timing out entirely. And (c) above was tested directly: the two
+//   visibility predicates never disagreed.
+//
+// The lesson, and the reason `expect` is mandatory on every SCREENS entry:
+// "exactly one visible screen" is NOT the same as "the screen I asked for".
+// A reachable wrong screen is far more dangerous than a moving one, because
+// it yields numbers indistinguishable from a real layout defect.
 const SETTLE_STATE = "(() => { const vis = [...document.querySelectorAll('.app-screen')].filter(x => !x.classList.contains('hidden') && x.getClientRects().length > 0); return { n: vis.length, ids: vis.map(x => x.id).join(','), transitioning: document.body.classList.contains('cognitive-screen-transition') }; })()";
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -175,14 +199,18 @@ async function main() {
             return result.result.value;
         }
 
-        // See SETTLE_STATE above for why a fixed delay is not enough.
-        async function settleLayout() {
+        // See SETTLE_STATE above for why a fixed delay is not enough. Requiring
+        // `expect` is the part that matters: "exactly one visible screen" is
+        // satisfied just as well by the screen we were trying to LEAVE, which
+        // is precisely how this gate measured foodCategorySelect instead of
+        // foodGame and invented a layout bug that never existed.
+        async function settleLayout(expect) {
             for (let i = 0; i < 50; i++) {
                 const s = await evaluate(SETTLE_STATE).catch(() => null);
-                if (s && s.n === 1 && !s.transitioning) {
+                if (s && s.n === 1 && !s.transitioning && s.ids === expect) {
                     await delay(120);
                     const again = await evaluate(SETTLE_STATE).catch(() => null);
-                    if (again && again.n === 1 && !again.transitioning && again.ids === s.ids) return true;
+                    if (again && again.n === 1 && !again.transitioning && again.ids === expect) return true;
                 }
                 await delay(120);
             }
@@ -227,8 +255,9 @@ async function main() {
                 await evaluate("(() => { if (window.CognitiveMessage) window.CognitiveMessage.dismiss(); return 1; })()");
                 await delay(550);
 
-                if (!await settleLayout()) {
-                    fail(vp.name + '/' + screen.name + ': the screen never settled (more than one visible screen, or a transition never finished)');
+                if (!await settleLayout(screen.expect)) {
+                    const seen = await evaluate(SETTLE_STATE).catch(() => null);
+                    fail(vp.name + '/' + screen.name + ': never reached "' + screen.expect + '" (saw ' + (seen ? (seen.n + ' visible: ' + seen.ids + ', transitioning=' + seen.transitioning) : 'nothing') + ') -- refusing to measure the wrong screen');
                     continue;
                 }
                 const m = await evaluate(METRIC);
