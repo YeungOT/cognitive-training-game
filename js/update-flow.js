@@ -47,13 +47,29 @@
         var pendingUpdateReload = false;
         var reloading = false;
         var disposed = false;
+        // Once the bar has reached its final 100% it must stay there. A
+        // precache-progress message can still arrive after that point -- most
+        // visibly in the update path, where finishWorkerUpdate sets 100% and
+        // then calls location.reload(), which is not instantaneous. A late
+        // message in that window overwrote the bar with a low percentage, so
+        // it visibly fell from 100% back to ~2% just before the reload. That
+        // read as a second loading bar, which is the symptom users reported.
+        var progressLatched = false;
 
         function setProgress(loaded, total) {
+            if (progressLatched) return;
             if (typeof loader.setProgress !== 'function') return;
             loader.setProgress(loaded, total);
         }
 
+        function finishProgress() {
+            setProgress(1, 1);
+            progressLatched = true;
+        }
+
         function showLoader() {
+            // A new loader cycle starts a new progress cycle, so unlatch.
+            progressLatched = false;
             if (typeof loader.show === 'function') loader.show();
         }
 
@@ -103,7 +119,7 @@
             // install left the bar at its 0% stylesheet default and the user
             // watched an empty loader until home appeared - which is every
             // ordinary repeat visit, and the second boot after an update.
-            setProgress(1, 1);
+            finishProgress();
 
             function finish() {
                 hideLoader();
@@ -233,7 +249,7 @@
                 })
                 .then(function () {
                     if (shouldReload && registration.active && registration.active.state === 'activated') {
-                        setProgress(1, 1);
+                        finishProgress();
                         reloadForUpdate();
                         return;
                     }

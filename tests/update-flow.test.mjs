@@ -522,3 +522,44 @@ test('progress cap is configurable via progressCapPercent', async function () {
     await startPromise;
     assert.equal(loader.counts().hidden, 1);
 });
+
+// Regression: a precache-progress message arriving AFTER the bar has already
+// reached 100% must not move it. In the update path finishWorkerUpdate sets
+// 100% and then calls location.reload(), which is not instantaneous; a late
+// worker message in that window overwrote the bar with a low percentage, so it
+// visibly fell from 100% back to ~2% just before the reload. Users read that as
+// a second loading bar. verify-boot caught it, but only intermittently, which
+// is why this is pinned deterministically here.
+test('a progress message after the bar reaches 100% does not move it back', async function () {
+    const worker = createWorker('activated');
+    const registration = createRegistration(worker);
+    const container = createServiceWorkerContainer(registration);
+    const loader = createLoader();
+
+    const flow = createUpdateFlow({
+        navigator: { serviceWorker: container, onLine: true },
+        loader
+    });
+
+    await flow.start(() => {});
+
+    const progress = loader.counts().progress;
+    assert.deepEqual(progress[progress.length - 1], [1, 1], 'bar should finish at 100%');
+    const countAtFinish = progress.length;
+
+    // A late message from the still-installing worker.
+    container.emit('message', {
+        data: { type: 'cognitive-precache-progress', loaded: 2, total: 431, done: false }
+    });
+
+    assert.equal(
+        loader.counts().progress.length,
+        countAtFinish,
+        'a late precache message must not write progress after the bar finished'
+    );
+    assert.deepEqual(
+        loader.counts().progress[loader.counts().progress.length - 1],
+        [1, 1],
+        'bar must still read 100%'
+    );
+});
