@@ -611,6 +611,10 @@
 - [TOOL] `tests/css-parity.test.mjs` extended with two tests, each proven able to fail independently: (a) every title gap must consume `--screen-title-gap`; (b) `.reality-edit-btn` must be sized by the same rule as `.hamburger-btn`. Both encode a bug class rather than an instance: a higher-specificity selector silently overriding a shared value.
 - [ASSUMPTION] Both new tests failed on first run against already-FIXED code -- my `:not(.menu-header)` selectors and `--settings-header-gap` alias were legitimate, and my "reality.css must set no width" assertion was simply wrong (that rule is correct on desktop; the phone rule is meant to override it). Corrected rather than weakened to pass.
 
+### Device-verified (2026-10-05)
+- [USER] "The css fix worked" -- confirmed on the deployed site. The tile-screen title gap and the reality edit-button size are both correct in the hand.
+- [ASSUMPTION] This closes the one gap the gates could not: they verify geometry, no overflow and no cross-screen drift, but whether 16px actually READS correctly on a two-tile screen like `nbackModeSelect` is a judgement only a person can make. Recorded because it is the only evidence for that judgement and it cannot be re-derived later.
+
 ## Fix — palm game's back button was dead (2026-10-04)
 - [USER] "The return button does not work in the palm game."
 - [CODE] ROOT CAUSE: the shared Game Screen (`js/game-screen.js`) only **creates** the back button from each game's `backId`. Wiring the click handler is each game's separate responsibility, and `palm.js` never did it — it wired six controls (swap, play, leftSide, rightSide, speedUp, speedDown) and stopped there. The button rendered perfectly and did nothing. The only references to `palmBackBtn` in the whole repo were the screen definition and an existence check.
