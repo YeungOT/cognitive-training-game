@@ -87,7 +87,7 @@
             els.pairsGridContainer.classList.add('is-preview');
             if (message && typeof message.show === 'function') {
                 message.show({
-                    title: '👀 記住卡片位置',
+                    title: '記住卡片位置',
                     extraLarge: true,
                     pauseTimer: false
                 });
