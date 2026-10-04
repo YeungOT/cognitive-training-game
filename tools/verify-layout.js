@@ -6,15 +6,10 @@
 // stack, horizontal overflow, and tap-target floors.
 //
 // Usage: node tools/verify-layout.js
-const { spawn } = require('child_process');
-const os = require('os');
-const path = require('path');
+const { launch, defeatServiceWorker, delay } = require('./lib/cdp-harness');
 
-const root = path.resolve(__dirname, '..');
 const appUrl = process.env.APP_URL || 'http://localhost:4183/';
 const port = Number(process.env.CDP_PORT || 9352);
-const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const profileDir = path.join(os.tmpdir(), 'cognitive-layout-' + Date.now());
 
 const TOL = 1;
 const TAP_FLOOR = 24;
@@ -132,8 +127,6 @@ const METRIC = "(() => {"
 // it yields numbers indistinguishable from a real layout defect.
 const SETTLE_STATE = "(() => { const vis = [...document.querySelectorAll('.app-screen')].filter(x => !x.classList.contains('hidden') && x.getClientRects().length > 0); return { n: vis.length, ids: vis.map(x => x.id).join(','), transitioning: document.body.classList.contains('cognitive-screen-transition') }; })()";
 
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
 function fail(msg) { failures.push(msg); console.log('FAIL - ' + msg); }
 function pass(msg) { console.log('PASS - ' + msg); }
 function note(msg) { knownFailures.push(msg); console.log('KNOWN - ' + msg); }
@@ -144,59 +137,32 @@ function describe(label, m) {
 }
 
 async function main() {
-    const server = spawn(process.execPath, [path.join(root, 'tools', 'serve.js'), '4183'], { stdio: 'ignore' });
-    const chrome = spawn(chromePath, [
-        '--headless=new', '--disable-gpu', '--no-sandbox',
-        '--remote-debugging-port=' + port,
-        '--user-data-dir=' + profileDir,
-        'about:blank'
-    ], { stdio: 'ignore' });
-
-    let ws;
+    let browser = null;
     try {
-        await delay(800);
-        let page = null;
-        for (let i = 0; i < 100 && !page; i++) {
-            try {
-                const targets = await (await fetch('http://127.0.0.1:' + port + '/json/list')).json();
-                page = targets.find(t => t.type === 'page');
-            } catch (e) {}
-            if (!page) await delay(200);
-        }
-        if (!page) throw new Error('Chrome DevTools target did not appear');
-
-        ws = new WebSocket(page.webSocketDebuggerUrl);
-        await new Promise((resolve, reject) => {
-            ws.addEventListener('open', resolve, { once: true });
-            ws.addEventListener('error', reject, { once: true });
+        browser = await launch({
+            servePort: 4183,
+            cdpPort: port,
+            appUrl: appUrl,
+            errors: consoleErrors,
+            collectExceptions: false,
+            profilePrefix: 'cognitive-layout',
+            deviceMetrics: { width: VIEWPORTS[0].w, height: VIEWPORTS[0].h, deviceScaleFactor: 1, mobile: false }
         });
+        const { send, evaluate } = browser;
 
-        let nextId = 1;
-        const pending = new Map();
-        ws.addEventListener('message', event => {
-            const message = JSON.parse(String(event.data));
-            if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-                consoleErrors.push(message.params.entry.text);
+        // Each Page.navigate reloads the document, which re-runs boot. Without
+        // waiting for boot to finish, goHome() and the per-screen steps below can
+        // run while the router is still being wired, and the gate then reports
+        // "never reached <screen>" for whichever screen happened to be first.
+        // That is a gate bug, not an app bug, and it is intermittent: which
+        // screen failed varied between runs.
+        async function waitForBoot() {
+            for (let i = 0; i < 80; i++) {
+                const booted = await evaluate("(() => { const l = document.getElementById('bootLoader'); return (!l || l.classList.contains('hidden') || l.getClientRects().length === 0) && document.readyState === 'complete' && !!window.CognitiveRouter; })()").catch(() => false);
+                if (booted) return true;
+                await delay(250);
             }
-            if (!message.id || !pending.has(message.id)) return;
-            const handlers = pending.get(message.id);
-            pending.delete(message.id);
-            if (message.error) handlers.reject(new Error(message.error.message));
-            else handlers.resolve(message.result);
-        });
-
-        function send(method, params) {
-            return new Promise((resolve, reject) => {
-                const id = nextId++;
-                pending.set(id, { resolve, reject });
-                ws.send(JSON.stringify({ id, method, params: params || {} }));
-            });
-        }
-
-        async function evaluate(expression) {
-            const result = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-            if (result.exceptionDetails) throw new Error('Evaluation failed: ' + result.exceptionDetails.text);
-            return result.result.value;
+            return false;
         }
 
         // See SETTLE_STATE above for why a fixed delay is not enough. Requiring
@@ -217,20 +183,12 @@ async function main() {
             return false;
         }
 
-        await send('Page.enable');
-        await send('Runtime.enable');
-        await send('Log.enable');
-
         // The app registers a service worker that precaches every asset. A
         // freshly generated sw.js only activates AFTER the page has loaded once,
-        // so a single navigation can measure stale CSS/JS and silently pass. Drop
-        // the worker and its caches before measuring anything.
-        await send('Emulation.setDeviceMetricsOverride', {
-            width: VIEWPORTS[0].w, height: VIEWPORTS[0].h, deviceScaleFactor: 1, mobile: false
-        });
-        await send('Page.navigate', { url: appUrl });
-        await delay(2200);
-        await evaluate("(async () => { const rs = await navigator.serviceWorker.getRegistrations(); for (const r of rs) { await r.unregister(); } const ks = await caches.keys(); for (const k of ks) { await caches.delete(k); } return { unregistered: rs.length, cachesCleared: ks.length }; })()");
+        // so a single navigation can measure stale CSS/JS and silently pass.
+        // The launch above already navigated once; now drop the worker and its
+        // caches and reload so everything measured comes from disk.
+        await defeatServiceWorker(evaluate);
         await send('Page.reload');
         await delay(2200);
 
@@ -240,6 +198,7 @@ async function main() {
             });
             await send('Page.navigate', { url: appUrl });
             await delay(2200);
+            await waitForBoot();
 
             console.log('\n== ' + vp.name + ' ' + vp.w + 'x' + vp.h + ' ==');
             const results = [];
@@ -321,10 +280,8 @@ async function main() {
         const allPass = failures.length === 0;
         console.log('result=' + (allPass ? 'PASS' : 'FAIL') + ' checks=' + (allPass ? 'all' : failures.length + ' failed'));
         if (!allPass) process.exitCode = 1;
-        ws.close();
     } finally {
-        chrome.kill();
-        server.kill();
+        if (browser) await browser.close();
         await delay(500);
     }
 }

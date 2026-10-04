@@ -1,86 +1,20 @@
 // Functional headless-Chrome verification of the six cognitive games.
 // Usage: node tools/verify-games.js   (starts its own static server on 4173)
 //        APP_URL / CDP_PORT / CHROME_PATH env overrides supported.
-const { spawn } = require('child_process');
-const os = require('os');
-const path = require('path');
+const { launch, defeatServiceWorker, delay } = require('./lib/cdp-harness');
 
-const root = path.resolve(__dirname, '..');
 const appUrl = process.env.APP_URL || 'http://localhost:4173/';
 const port = Number(process.env.CDP_PORT || 9334);
-const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const profileDir = path.join(os.tmpdir(), 'cognitive-games-cdp-' + Date.now());
 const servePort = 4173;
 
 const failures = [];
 const errors = [];
 
-function delay(ms) { return new Promise((r) => setTimeout(r, ms)); }
-
-async function getTargets() {
-  const res = await fetch('http://127.0.0.1:' + port + '/json/list');
-  return res.json();
-}
-async function waitForTargets(timeoutMs) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const targets = await getTargets();
-      const page = targets.find((t) => t.type === 'page');
-      if (page) return page;
-    } catch (e) {}
-    await delay(200);
-  }
-  throw new Error('Chrome DevTools target did not appear');
-}
-
 async function main() {
-  const server = spawn(process.execPath, [path.join(root, 'tools', 'serve.js'), String(servePort)], { stdio: 'ignore' });
-  const chrome = spawn(chromePath, [
-    '--headless=new', '--disable-gpu', '--no-sandbox',
-    '--remote-debugging-port=' + port,
-    '--user-data-dir=' + profileDir,
-    'about:blank'
-  ], { stdio: 'ignore' });
-
+  let browser = null;
   try {
-    await delay(800);
-    const page = await waitForTargets(20000);
-    const ws = new WebSocket(page.webSocketDebuggerUrl);
-    await new Promise((resolve, reject) => {
-      ws.addEventListener('open', resolve, { once: true });
-      ws.addEventListener('error', reject, { once: true });
-    });
-
-    let nextId = 1;
-    const pending = new Map();
-    ws.addEventListener('message', (event) => {
-      const message = JSON.parse(String(event.data));
-      if (message.method === 'Runtime.exceptionThrown') {
-        errors.push('exception: ' + JSON.stringify(message.params.exceptionDetails.exception && message.params.exceptionDetails.exception.description || message.params.exceptionDetails.text));
-      }
-      if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-        errors.push('console.error: ' + message.params.entry.text);
-      }
-      if (!message.id || !pending.has(message.id)) return;
-      const handlers = pending.get(message.id);
-      pending.delete(message.id);
-      if (message.error) handlers.reject(new Error(message.error.message));
-      else handlers.resolve(message.result);
-    });
-
-    function send(method, params) {
-      return new Promise((resolve, reject) => {
-        const id = nextId++;
-        pending.set(id, { resolve, reject });
-        ws.send(JSON.stringify({ id, method, params: params || {} }));
-      });
-    }
-    async function evaluate(expression) {
-      const result = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-      if (result.exceptionDetails) throw new Error('Evaluation failed: ' + JSON.stringify(result.exceptionDetails));
-      return result.result.value;
-    }
+    browser = await launch({ servePort: servePort, cdpPort: port, appUrl: appUrl, errors: errors, profilePrefix: 'cognitive-games' });
+    const { send, evaluate } = browser;
     async function check(name, fn) {
       try {
         const ok = await fn();
@@ -110,10 +44,6 @@ async function main() {
       return evaluate(`document.querySelectorAll(${JSON.stringify(sel)}).length`);
     }
 
-    await send('Page.enable');
-    await send('Runtime.enable');
-    await send('Log.enable');
-    await send('Page.navigate', { url: appUrl });
     const start = Date.now();
     while (Date.now() - start < 30000) {
       const ready = await evaluate(`({ ready: document.readyState, hasRouter: !!window.CognitiveRouter, hasData: !!window.CognitiveFoodData })`).catch(() => null);
@@ -126,13 +56,7 @@ async function main() {
     // generated sw.js only activates after the page has loaded once - so the
     // checks above can run against stale CSS/JS and pass anyway. Drop the
     // worker and its caches, then reload, so this always tests current files.
-    await evaluate(`(async () => {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      for (const reg of regs) { await reg.unregister(); }
-      const keys = await caches.keys();
-      for (const key of keys) { await caches.delete(key); }
-      return true;
-    })()`).catch(() => null);
+    await defeatServiceWorker(evaluate).catch(() => null);
     await send('Page.reload');
     const reloadStart = Date.now();
     while (Date.now() - reloadStart < 30000) {
@@ -424,10 +348,8 @@ async function main() {
     const pass = failures.length === 0 && errors.length === 0;
     console.log('result=' + (pass ? 'PASS' : 'FAIL') + ' checks=' + (failures.length === 0 ? 'all' : failures.length + ' failed'));
     if (!pass) process.exitCode = 1;
-    ws.close();
   } finally {
-    chrome.kill();
-    server.kill();
+    if (browser) await browser.close();
     await delay(500);
   }
 }

@@ -5,15 +5,10 @@
 //
 // Usage: node tools/verify-parity.js
 //        APP_URL / CDP_PORT / CHROME_PATH env overrides supported.
-const { spawn } = require('child_process');
-const os = require('os');
-const path = require('path');
+const { launch, defeatServiceWorker, delay } = require('./lib/cdp-harness');
 
-const root = path.resolve(__dirname, '..');
 const appUrl = process.env.APP_URL || 'http://localhost:4181/';
 const port = Number(process.env.CDP_PORT || 9348);
-const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const profileDir = path.join(os.tmpdir(), 'cognitive-parity-' + Date.now());
 
 const TOL = 0.5;
 const failures = [];
@@ -47,8 +42,6 @@ const GAMES = [
 // stage class names (.stage, .grid-wrapper, .dual-stage, ...).
 const METRIC = "(() => { const s = [...document.querySelectorAll('.app-screen')].filter(x => !x.classList.contains('hidden'))[0]; if (!s) return null; const box = e => { if (!e) return null; const r = e.getBoundingClientRect(); return { w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10, y: Math.round(r.y * 10) / 10 }; }; const f = s.querySelector('.bottom-controls,.footer'); const primary = s.querySelector('#swapBtn,.go-btn,.match-btn,.dual-match-btn'); return { screen: s.id, footer: box(f), stage: box(s.children[1]), primary: box(primary), play: box(s.querySelector('.play-btn')), speed: box(s.querySelector('.speed-control')) }; })()";
 
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
 function uiScale(w, h) { return Math.min(w / 1280, h / 800); }
 
 function expectedFloor(vp) { return Math.max(88, Math.round(88 * uiScale(vp.w, vp.h) * 10) / 10); }
@@ -64,85 +57,39 @@ function row(label, m) {
         '  play ' + v(m.play) + '  speed ' + v(m.speed);
 }
 
-async function getTargets() {
-    const res = await fetch('http://127.0.0.1:' + port + '/json/list');
-    return res.json();
-}
-
-async function waitForTargets(timeoutMs) {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-        try {
-            const targets = await getTargets();
-            const page = targets.find(t => t.type === 'page');
-            if (page) return page;
-        } catch (e) {}
-        await delay(200);
-    }
-    throw new Error('Chrome DevTools target did not appear');
-}
-
 async function main() {
-    const server = spawn(process.execPath, [path.join(root, 'tools', 'serve.js'), '4181'], { stdio: 'ignore' });
-    const chrome = spawn(chromePath, [
-        '--headless=new', '--disable-gpu', '--no-sandbox',
-        '--remote-debugging-port=' + port,
-        '--user-data-dir=' + profileDir,
-        'about:blank'
-    ], { stdio: 'ignore' });
-
-    let ws;
+    let browser = null;
     try {
-        await delay(800);
-        const page = await waitForTargets(20000);
-        ws = new WebSocket(page.webSocketDebuggerUrl);
-        await new Promise((resolve, reject) => {
-            ws.addEventListener('open', resolve, { once: true });
-            ws.addEventListener('error', reject, { once: true });
+        browser = await launch({
+            servePort: 4181,
+            cdpPort: port,
+            appUrl: appUrl,
+            errors: consoleErrors,
+            collectExceptions: false,
+            profilePrefix: 'cognitive-parity',
+            deviceMetrics: { width: VIEWPORTS[0].w, height: VIEWPORTS[0].h, deviceScaleFactor: 1, mobile: false }
         });
+        const { send, evaluate } = browser;
 
-        let nextId = 1;
-        const pending = new Map();
-        ws.addEventListener('message', event => {
-            const message = JSON.parse(String(event.data));
-            if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-                consoleErrors.push(message.params.entry.text);
+        // Each Page.navigate reloads the document and re-runs boot. Without
+        // waiting for boot to finish, goHome() and the per-game steps below can
+        // run while the router is still being wired, so the first game measured
+        // (palm) reports as unmeasurable. Intermittent, and a gate bug, not an
+        // app bug -- same reason verify-layout waits too.
+        async function waitForBoot() {
+            for (let i = 0; i < 80; i++) {
+                const booted = await evaluate("(() => { const l = document.getElementById('bootLoader'); return (!l || l.classList.contains('hidden') || l.getClientRects().length === 0) && document.readyState === 'complete' && !!window.CognitiveRouter; })()").catch(() => false);
+                if (booted) return true;
+                await delay(250);
             }
-            if (!message.id || !pending.has(message.id)) return;
-            const handlers = pending.get(message.id);
-            pending.delete(message.id);
-            if (message.error) handlers.reject(new Error(message.error.message));
-            else handlers.resolve(message.result);
-        });
-
-        function send(method, params) {
-            return new Promise((resolve, reject) => {
-                const id = nextId++;
-                pending.set(id, { resolve, reject });
-                ws.send(JSON.stringify({ id, method, params: params || {} }));
-            });
+            return false;
         }
-
-        async function evaluate(expression) {
-            const result = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-            if (result.exceptionDetails) throw new Error('Evaluation failed: ' + result.exceptionDetails.text);
-            return result.result.value;
-        }
-
-        await send('Page.enable');
-        await send('Runtime.enable');
-        await send('Log.enable');
 
         // The app precaches every asset behind a service worker, and a freshly
         // generated sw.js only activates after the page has loaded once - so a
-        // single navigation can measure stale CSS and silently pass. Drop the
-        // worker and its caches before measuring.
-        await send('Emulation.setDeviceMetricsOverride', {
-            width: VIEWPORTS[0].w, height: VIEWPORTS[0].h, deviceScaleFactor: 1, mobile: false
-        });
-        await send('Page.navigate', { url: appUrl });
-        await delay(2200);
-        await evaluate("(async () => { const rs = await navigator.serviceWorker.getRegistrations(); for (const r of rs) { await r.unregister(); } const ks = await caches.keys(); for (const k of ks) { await caches.delete(k); } return 1; })()");
+        // single navigation can measure stale CSS and silently pass. The launch
+        // above already navigated once; drop the worker and its caches, reload.
+        await defeatServiceWorker(evaluate);
         await send('Page.reload');
         await delay(2200);
 
@@ -152,6 +99,7 @@ async function main() {
             });
             await send('Page.navigate', { url: appUrl });
             await delay(2200);
+            await waitForBoot();
 
             console.log('\n== ' + vp.name + ' ' + vp.w + 'x' + vp.h + ' (ui-scale ' + uiScale(vp.w, vp.h).toFixed(3) + ') ==');
 
@@ -204,10 +152,8 @@ async function main() {
         const passAll = failures.length === 0;
         console.log('result=' + (passAll ? 'PASS' : 'FAIL') + ' checks=' + (passAll ? 'all' : failures.length + ' failed'));
         if (!passAll) process.exitCode = 1;
-        ws.close();
     } finally {
-        chrome.kill();
-        server.kill();
+        if (browser) await browser.close();
         await delay(500);
     }
 }

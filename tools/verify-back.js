@@ -9,15 +9,10 @@
 // `#palmBackBtn` was present in the DOM, so the dead button sailed through.
 //
 // Usage: node tools/verify-back.js
-const { spawn } = require('child_process');
-const os = require('os');
-const path = require('path');
+const { launch, defeatServiceWorker, delay } = require('./lib/cdp-harness');
 
-const root = path.resolve(__dirname, '..');
 const appUrl = 'http://localhost:4186/';
 const port = Number(process.env.CDP_PORT || 9342);
-const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const profileDir = path.join(os.tmpdir(), 'cognitive-back-' + Date.now());
 
 // steps mirror tools/verify-layout.js so both gates agree on how to reach a game.
 const SCREENS = [
@@ -54,73 +49,24 @@ const SCREENS = [
 
 const failures = [];
 const errors = [];
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 function fail(m) { failures.push(m); console.log('FAIL - ' + m); }
 function pass(m) { console.log('PASS - ' + m); }
 
 async function main() {
-    const server = spawn(process.execPath, [path.join(root, 'tools', 'serve.js'), '4186'], { stdio: 'ignore' });
-    const chrome = spawn(chromePath, [
-        '--headless=new', '--disable-gpu', '--no-sandbox',
-        '--remote-debugging-port=' + port,
-        '--user-data-dir=' + profileDir,
-        'about:blank'
-    ], { stdio: 'ignore' });
-
-    let ws;
+    let browser = null;
     try {
-        await delay(900);
-        let page = null;
-        const started = Date.now();
-        while (Date.now() - started < 20000 && !page) {
-            try {
-                const list = await (await fetch('http://127.0.0.1:' + port + '/json/list')).json();
-                page = list.find(t => t.type === 'page');
-            } catch (e) {}
-            if (!page) await delay(200);
-        }
-        if (!page) throw new Error('Chrome DevTools target did not appear');
-
-        ws = new WebSocket(page.webSocketDebuggerUrl);
-        await new Promise((res, rej) => {
-            ws.addEventListener('open', res, { once: true });
-            ws.addEventListener('error', rej, { once: true });
+        browser = await launch({
+            servePort: 4186,
+            cdpPort: port,
+            appUrl: appUrl,
+            errors: errors,
+            profilePrefix: 'cognitive-back',
+            deviceMetrics: { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }
         });
-        let nextId = 1;
-        const pending = new Map();
-        ws.addEventListener('message', ev => {
-            const m = JSON.parse(String(ev.data));
-            if (m.method === 'Runtime.exceptionThrown') {
-                errors.push('exception: ' + (m.params.exceptionDetails.exception && m.params.exceptionDetails.exception.description || m.params.exceptionDetails.text));
-            }
-            if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error') {
-                errors.push('console.error: ' + m.params.entry.text);
-            }
-            if (!m.id || !pending.has(m.id)) return;
-            const h = pending.get(m.id);
-            pending.delete(m.id);
-            if (m.error) h.reject(new Error(m.error.message)); else h.resolve(m.result);
-        });
-        const send = (method, params) => new Promise((resolve, reject) => {
-            const id = nextId++;
-            pending.set(id, { resolve, reject });
-            ws.send(JSON.stringify({ id, method, params: params || {} }));
-        });
-        const evaluate = async (expression) => {
-            const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-            if (r.exceptionDetails) throw new Error(JSON.stringify(r.exceptionDetails));
-            return r.result.value;
-        };
-
-        await send('Page.enable');
-        await send('Runtime.enable');
-        await send('Log.enable');
-        await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
-        await send('Page.navigate', { url: appUrl });
-        await delay(2400);
+        const { send, evaluate } = browser;
         // The app precaches behind a service worker; a fresh sw.js only activates
         // after a load, so measuring without this reads stale assets.
-        await evaluate("(async () => { const rs = await navigator.serviceWorker.getRegistrations(); for (const r of rs) { await r.unregister(); } const ks = await caches.keys(); for (const k of ks) { await caches.delete(k); } return 1; })()");
+        await defeatServiceWorker(evaluate);
         await send('Page.reload');
         await delay(2400);
         for (let i = 0; i < 60; i++) {
@@ -183,9 +129,7 @@ async function main() {
             failures.push('page errors: ' + errors.length);
         }
     } finally {
-        try { if (ws) ws.close(); } catch (e) {}
-        try { server.kill(); } catch (e) {}
-        try { chrome.kill(); } catch (e) {}
+        if (browser) await browser.close();
     }
 
     if (failures.length) {

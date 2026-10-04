@@ -12,10 +12,11 @@
 //   update  - a new build is published, worker installs and the page reloads
 //
 // Usage: node tools/verify-boot.js
-const { spawn, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { launch, delay } = require('./lib/cdp-harness');
 
 const root = path.resolve(__dirname, '..');
 const port = Number(process.env.CDP_PORT || 9366);
@@ -23,10 +24,8 @@ const servePort = Number(process.env.SERVE_PORT || 4190);
 const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cognitive-boot-'));
 const appDir = path.join(workDir, 'app');
-const profileDir = path.join(workDir, 'profile');
 
 const failures = [];
-const delay = ms => new Promise(r => setTimeout(r, ms));
 
 // Injected before any page script. Everything is appended to a sessionStorage
 // log so it survives the reload that the update leg causes.
@@ -172,46 +171,29 @@ function checkLeg(name, snapshots, allowReload) {
 
 async function main() {
   copyApp();
-  const server = spawn(process.execPath, [path.join(appDir, 'tools', 'serve.js'), String(servePort)], { stdio: 'ignore' });
-  const chrome = spawn(chromePath, ['--headless=new', '--disable-gpu', '--no-sandbox',
-    '--remote-debugging-port=' + port, '--user-data-dir=' + profileDir, 'about:blank'], { stdio: 'ignore' });
-  let ws;
+  let browser = null;
   try {
-    await delay(900);
-    let page;
-    for (let i = 0; i < 100 && !page; i++) {
-      try {
-        const list = await (await fetch('http://127.0.0.1:' + port + '/json/list')).json();
-        page = list.find(t => t.type === 'page');
-      } catch (e) {}
-      if (!page) await delay(200);
-    }
-    if (!page) throw new Error('Chrome DevTools target did not appear');
-    ws = new WebSocket(page.webSocketDebuggerUrl);
-    await new Promise((res, rej) => {
-      ws.addEventListener('open', res, { once: true });
-      ws.addEventListener('error', rej, { once: true });
+    // quiet: this gate runs its own navigations (cold start from about:blank,
+    // then published builds), so the harness must not navigate on its own. The
+    // injected scripts must be registered BEFORE the first navigation.
+    browser = await launch({
+      servePort: servePort,
+      serveDir: appDir,
+      cdpPort: port,
+      profilePrefix: 'cognitive-boot',
+      deviceMetrics: { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false },
+      quiet: true,
+      beforeNavigate: async ({ send }) => {
+        await send('Page.addScriptToEvaluateOnNewDocument', { source: S.join('\n') });
+        await send('Page.addScriptToEvaluateOnNewDocument', { source: F.join('\n') });
+      }
     });
-    let nextId = 1; const pending = new Map();
-    ws.addEventListener('message', e => {
-      const m = JSON.parse(String(e.data));
-      if (!m.id || !pending.has(m.id)) return;
-      const h = pending.get(m.id); pending.delete(m.id);
-      m.error ? h.reject(new Error(m.error.message)) : h.resolve(m.result);
-    });
-    const send = (method, params) => new Promise((resolve, reject) => {
-      const id = nextId++; pending.set(id, { resolve, reject });
-      ws.send(JSON.stringify({ id, method, params: params || {} }));
-    });
+    const send = browser.send;
     const ev = async x => {
       const r = await send('Runtime.evaluate', { expression: x, awaitPromise: true, returnByValue: true });
       if (r.exceptionDetails) throw new Error(r.exceptionDetails.text);
       return r.result.value;
     };
-    await send('Page.enable'); await send('Runtime.enable');
-    await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
-    await send('Page.addScriptToEvaluateOnNewDocument', { source: S.join('\n') });
-    await send('Page.addScriptToEvaluateOnNewDocument', { source: F.join('\n') });
 
     const visit = async (ms, reset) => {
       // The first leg must NOT reset: navigating from about:blank is the only way
@@ -240,9 +222,9 @@ async function main() {
     const passAll = failures.length === 0;
     console.log('\nresult=' + (passAll ? 'PASS' : 'FAIL') + ' checks=' + (passAll ? 'all' : failures.length + ' failed'));
     if (!passAll) process.exitCode = 1;
-    ws.close();
   } finally {
-    chrome.kill(); server.kill(); await delay(500);
+    if (browser) await browser.close();
+    await delay(500);
     fs.rmSync(workDir, { recursive: true, force: true });
   }
 }
