@@ -1,13 +1,10 @@
-const { spawn } = require('child_process');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+const { launch, delay } = require('./lib/cdp-harness');
 
 const root = path.resolve(__dirname, '..');
 const appUrl = process.env.APP_URL || 'http://localhost:4173/';
 const port = Number(process.env.CDP_PORT || 9333);
-const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const profileDir = path.join(os.tmpdir(), 'cognitive-pwa-cdp-' + Date.now());
 
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 const appAssetMatch = swSource.match(/const APP_ASSET_PATHS = (\[[\s\S]*?\]);/);
@@ -19,76 +16,25 @@ const expectedAssets = appAssets.length + mediaAssets.length;
 const sampleAsset = mediaAssets.find((name) => name.startsWith('assets/food/'));
 const imageAssets = mediaAssets.filter((name) => /\.(webp|png|svg)$/i.test(name));
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function getTargets() {
-  const response = await fetch('http://127.0.0.1:' + port + '/json/list');
-  return response.json();
-}
-
-async function waitForTargets(timeoutMs) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const targets = await getTargets();
-      const page = targets.find((target) => target.type === 'page');
-      if (page) return page;
-    } catch (error) {}
-    await delay(200);
-  }
-  throw new Error('Chrome DevTools target did not appear');
-}
-
 async function main() {
-  const chrome = spawn(chromePath, [
-    '--headless=new',
-    '--disable-gpu',
-    '--no-sandbox',
-    '--remote-debugging-port=' + port,
-    '--user-data-dir=' + profileDir,
-    'about:blank'
-  ], { stdio: 'ignore' });
-
+  let browser = null;
   try {
-    const page = await waitForTargets(20000);
-    const ws = new WebSocket(page.webSocketDebuggerUrl);
-    await new Promise((resolve, reject) => {
-      ws.addEventListener('open', resolve, { once: true });
-      ws.addEventListener('error', reject, { once: true });
+    // This gate used to spawn Chrome but NOT a static server, so it only ever
+    // worked if something else was already serving the app on the same port.
+    // Run standalone, Page.navigate hit a refused connection, location.href
+    // stayed about:blank, and waitForReady threw "Page did not become ready".
+    // That is why it rotted: it was not wired into `npm run verify`, so nothing
+    // noticed. launch() owns the server now, so the gate is self-contained.
+    browser = await launch({
+      servePort: new URL(appUrl).port || '4173',
+      cdpPort: port,
+      appUrl: appUrl,
+      profilePrefix: 'cognitive-offline',
+      quiet: true
     });
 
-    let nextId = 1;
-    const pending = new Map();
-    ws.addEventListener('message', (event) => {
-      const message = JSON.parse(String(event.data));
-      if (!message.id || !pending.has(message.id)) return;
-      const handlers = pending.get(message.id);
-      pending.delete(message.id);
-      if (message.error) handlers.reject(new Error(message.error.message));
-      else handlers.resolve(message.result);
-    });
-
-    function send(method, params) {
-      return new Promise((resolve, reject) => {
-        const id = nextId++;
-        pending.set(id, { resolve, reject });
-        ws.send(JSON.stringify({ id, method, params: params || {} }));
-      });
-    }
-
-    async function evaluate(expression) {
-      const result = await send('Runtime.evaluate', {
-        expression,
-        awaitPromise: true,
-        returnByValue: true
-      });
-      if (result.exceptionDetails) {
-        throw new Error('Evaluation failed: ' + JSON.stringify(result.exceptionDetails));
-      }
-      return result.result.value;
-    }
+    const { send, evaluate } = browser;
+    await send('Network.enable');
 
     async function waitForReady(timeoutMs) {
       const start = Date.now();
@@ -140,9 +86,6 @@ async function main() {
       })()`);
     }
 
-    await send('Page.enable');
-    await send('Runtime.enable');
-    await send('Network.enable');
     await send('Page.navigate', { url: appUrl });
     await waitForReady(30000);
 
@@ -244,9 +187,8 @@ async function main() {
     console.log('result=' + (pass ? 'PASS' : 'FAIL'));
     if (!pass) process.exitCode = 1;
 
-    ws.close();
   } finally {
-    chrome.kill();
+    if (browser) await browser.close();
     await delay(500);
   }
 }
