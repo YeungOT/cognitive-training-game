@@ -125,7 +125,12 @@
         #mainMenu .menu-header,
         #foodCategorySelect .menu-header,
         #nbackModeSelect .menu-header {
-            margin-bottom: calc(4px * var(--ui-scale));
+            /* Was a hardcoded 4px * --ui-scale, i.e. ~2px on a phone. These ID
+               selectors outrank the shared .menu-header rule, so they silently
+               opted these three screens out of --screen-title-gap and the title
+               change never reached them. Consuming the token here instead keeps
+               one source of truth for title spacing. */
+            margin-bottom: var(--screen-title-gap);
         }
         #mainMenu .menu-subtitle,
         #foodCategorySelect .menu-subtitle,
@@ -803,7 +808,8 @@
                 --stage-avail-w: calc(var(--avail-w) - calc(8px * var(--ui-scale)));
             }
             .back-btn,
-            .hamburger-btn {
+            .hamburger-btn,
+            .action-btn.reality-edit-btn {
                 width: 38px;
                 height: 38px;
                 min-width: 38px;

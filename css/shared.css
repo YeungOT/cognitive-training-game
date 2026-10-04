@@ -724,7 +724,9 @@
         }
 
         .home-header {
-            margin-bottom: calc(4px * var(--ui-scale));
+            /* Was hardcoded to 4px * --ui-scale (~2px on a phone). Consumes the
+               shared token so home tracks every other titled screen. */
+            margin-bottom: var(--screen-title-gap);
         }
 
         .home-header .menu-title {
