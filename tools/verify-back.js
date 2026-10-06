@@ -44,6 +44,7 @@ const SCREENS = [
     },
     { name: 'different', backId: 'differentBackBtn', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameDifferentBtn').click()"] },
     { name: 'pairs', backId: 'pairsBackBtn', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gamePairsBtn').click()", "document.getElementById('pairsStartBtn').click()"] },
+    { name: 'stroop', backId: 'stroopBackBtn', expectBackTo: 'home', steps: ["document.querySelector('[data-router-target=\"stroopGame\"]').click()"] },
     { name: 'reality', backId: 'realityBackBtn', steps: ["CognitiveRouter.navigate('realityBoard')"] }
 ];
 

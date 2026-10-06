@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="css/different.css" />
     <link rel="stylesheet" href="css/game-screen.css" />
     <link rel="stylesheet" href="css/pairs.css" />
+    <link rel="stylesheet" href="css/stroop.css" />
     <link rel="stylesheet" href="css/unified.css" />
     <script src="js/settings.js"></script>
     <script>try{var r=document.documentElement,t=CognitiveSettingsStore.load(CognitiveSettingsStore.keys.theme).theme==='dark'?'dark':'light',m=document.querySelector('meta[name="theme-color"]');r.setAttribute('data-theme',t);if(m){var s=getComputedStyle(r).getPropertyValue('--container-bg').trim();if(s){m.content=s;}}}catch(e){}</script>
@@ -48,7 +49,7 @@
         <div class="menu-header home-header">
             <div class="menu-title"><span class="brain">🧠</span> 認知訓練</div>
         </div>
-            <div class="home-grid menu-grid menu-cols-4 menu-rows-1">
+            <div class="home-grid menu-grid menu-cols-5 menu-rows-1">
                 <button class="category-btn home-link" data-router-target="realityBoard">
                     <span class="icon">🧭</span>
                     <span class="label">現實導向</span>
@@ -64,6 +65,10 @@
                 <button class="category-btn home-link" data-router-target="palm">
                     <span class="icon">👍</span>
                     <span class="label">手掌跳飛機</span>
+                </button>
+                <button class="category-btn home-link" data-router-target="stroopGame">
+                    <span class="icon">🎭</span>
+                    <span class="label">情緒反應</span>
                 </button>
             </div>
         <div class="menu-footer"></div>
@@ -301,6 +306,11 @@
     <div class="game-container app-screen game-screen hidden" id="gngGame"></div>
     <div class="menu-overlay app-screen settings-screen game-screen hidden" id="gngSettings"></div>
 
+    <!-- ================================================================
+        Emotional face-word Stroop (composed through the shared Game Screen)
+       ================================================================ -->
+    <div class="game-container app-screen game-screen hidden" id="stroopGame"></div>
+
 
     <!-- ================================================================
         找不同 game
@@ -392,6 +402,7 @@
     <script src="js/food/prefs.js"></script>
     <script src="js/food/message.js"></script>
     <script src="js/food/ui.js"></script>
+    <script src="js/celebrity-faces.js"></script>
     <script src="js/food/name-visibility.js"></script>
     <script src="js/food/food-logic.js"></script>
     <script src="js/food/food-view.js"></script>
@@ -423,6 +434,11 @@
     <script src="js/food/shopping-screen.js"></script>
     <script src="js/food/shopping-view.js"></script>
     <script src="js/food/shopping.js"></script>
+    <script src="js/food/stroop-logic.js"></script>
+    <script src="js/food/stroop-session.js"></script>
+    <script src="js/food/stroop-screen.js"></script>
+    <script src="js/food/stroop-view.js"></script>
+    <script src="js/food/stroop.js"></script>
     <script src="js/food/main.js"></script>
     <script src="js/update-flow.js"></script>
     <script src="js/boot.js"></script>

@@ -34,13 +34,14 @@ const GAMES = [
             "(() => { const a = document.getElementById('dualModality1Select'); a.value = 'position'; a.dispatchEvent(new Event('change')); const b = document.getElementById('dualModality2Select'); b.value = 'image'; b.dispatchEvent(new Event('change')); return 1; })()",
             "document.getElementById('dualStartBtn').click()"
         ]
-    }
+    },
+    { name: 'stroop', steps: ["document.querySelector('[data-router-target=\"stroopGame\"]').click()"] }
 ];
 
 // The composer appends top bar, stage, footer in that order, so the stage is the
 // screen's second child. Selecting by class is unreliable - games use different
 // stage class names (.stage, .grid-wrapper, .dual-stage, ...).
-const METRIC = "(() => { const s = [...document.querySelectorAll('.app-screen')].filter(x => !x.classList.contains('hidden'))[0]; if (!s) return null; const box = e => { if (!e) return null; const r = e.getBoundingClientRect(); return { w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10, y: Math.round(r.y * 10) / 10 }; }; const f = s.querySelector('.bottom-controls,.footer'); const primary = s.querySelector('#swapBtn,.go-btn,.match-btn,.dual-match-btn'); return { screen: s.id, footer: box(f), stage: box(s.children[1]), primary: box(primary), play: box(s.querySelector('.play-btn')), speed: box(s.querySelector('.speed-control')) }; })()";
+const METRIC = "(() => { const s = [...document.querySelectorAll('.app-screen')].filter(x => !x.classList.contains('hidden'))[0]; if (!s) return null; const box = e => { if (!e) return null; const r = e.getBoundingClientRect(); return { w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10, y: Math.round(r.y * 10) / 10 }; }; const f = s.querySelector('.bottom-controls,.footer'); const primary = s.querySelector('#swapBtn,.go-btn,.match-btn,.dual-match-btn,.stroop-answer-btn'); return { screen: s.id, footer: box(f), stage: box(s.children[1]), primary: box(primary), play: box(s.querySelector('.play-btn')), speed: box(s.querySelector('.speed-control')) }; })()";
 
 function uiScale(w, h) { return Math.min(w / 1280, h / 800); }
 

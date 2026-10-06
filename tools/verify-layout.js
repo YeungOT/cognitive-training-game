@@ -62,6 +62,7 @@ const SCREENS = [
     },
     { name: 'different', group: 'composer', expect: 'differentGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameDifferentBtn').click()"] },
     { name: 'pairs', group: 'composer', expect: 'pairsGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gamePairsBtn').click()", "document.getElementById('pairsStartBtn').click()"] },
+    { name: 'stroop', group: 'composer', expect: 'stroopGame', steps: ["document.querySelector('[data-router-target=\"stroopGame\"]').click()"] },
     { name: 'reality', group: 'legacy', expect: 'realityBoard', steps: ["CognitiveRouter.navigate('realityBoard')"] }
 ];
 

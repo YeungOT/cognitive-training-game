@@ -1,0 +1,148 @@
+/* Emotional face-word Stroop. Reuses the shared top bar, footer controls,
+   feedback pill and stage tokens; only the face/word stage and the two
+   neutral answer buttons are game-specific. */
+
+#stroopGame .stroop-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    padding: calc(2px * var(--ui-scale)) 0;
+}
+
+#stroopGame .stroop-face-wrap {
+    --grid-cols: 1;
+    --grid-rows: 1;
+    --grid-name-track: 0px;
+    --grid-avail-w: var(--stage-avail-w);
+    --stage-inner-extra-h: 0px;
+    position: relative;
+    width: var(--grid-card);
+    height: var(--grid-card);
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(18px * var(--ui-scale));
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+#stroopGame .stroop-face-wrap.feedback-correct {
+    background: var(--feedback-correct-bg);
+    box-shadow: var(--feedback-correct-glow);
+}
+
+#stroopGame .stroop-face-wrap.feedback-wrong {
+    background: var(--feedback-wrong-bg);
+    box-shadow: var(--feedback-wrong-glow);
+}
+
+#stroopGame .stroop-face {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+#stroopGame .stroop-word {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: 5%;
+    min-height: calc(58px * var(--ui-scale));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(6px * var(--ui-scale)) calc(14px * var(--ui-scale));
+    border-radius: calc(16px * var(--ui-scale));
+    background: rgba(255, 255, 255, 0.88);
+    color: #2b1d12;
+    font-size: calc(34px * var(--ui-scale));
+    font-weight: 700;
+    letter-spacing: 0;
+    text-align: center;
+    box-shadow: 0 calc(6px * var(--ui-scale)) calc(18px * var(--ui-scale)) rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+}
+
+#stroopGame .stroop-empty .stroop-face {
+    visibility: hidden;
+}
+
+#stroopGame .stroop-empty .stroop-word {
+    display: none;
+}
+
+#stroopGame .stroop-phase-hint {
+    position: absolute;
+    top: 3%;
+    left: 3%;
+    z-index: 30;
+    padding: calc(5px * var(--ui-scale)) calc(14px * var(--ui-scale));
+    border-radius: calc(999px * var(--ui-scale));
+    background: rgba(0, 0, 0, 0.58);
+    color: #ffffff;
+    font-size: calc(19px * var(--ui-scale));
+    font-weight: 700;
+    pointer-events: none;
+}
+
+#stroopGame .stroop-mode-label {
+    font-weight: 700;
+}
+
+#stroopGame .stroop-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(30px * var(--ui-scale));
+}
+
+#stroopGame .stroop-answer-btn {
+    height: var(--row-action-h);
+    min-width: var(--row-action-min-w);
+    padding: calc(10px * var(--ui-scale)) calc(28px * var(--ui-scale));
+    border: calc(2px * var(--ui-scale)) solid rgba(61, 44, 30, 0.22);
+    border-radius: calc(16px * var(--ui-scale));
+    background: var(--card-bg);
+    color: var(--text-color);
+    font-size: calc(32px * var(--ui-scale));
+    font-weight: 700;
+    letter-spacing: 0;
+    cursor: pointer;
+    box-shadow: var(--card-shadow);
+    touch-action: manipulation;
+}
+
+#stroopGame .stroop-answer-btn:active {
+    transform: translateY(1px);
+}
+
+#stroopGame .stroop-answer-btn:focus-visible {
+    outline: calc(3px * var(--ui-scale)) solid #3b82f6;
+    outline-offset: calc(3px * var(--ui-scale));
+}
+
+[data-theme="dark"] #stroopGame .stroop-answer-btn {
+    border-color: rgba(224, 224, 224, 0.28);
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    #stroopGame .stroop-word {
+        min-height: calc(42px * var(--ui-scale));
+        font-size: calc(24px * var(--ui-scale));
+        border-radius: calc(10px * var(--ui-scale));
+    }
+
+    #stroopGame .stroop-phase-hint {
+        font-size: calc(15px * var(--ui-scale));
+    }
+
+    #stroopGame .stroop-controls {
+        gap: calc(16px * var(--ui-scale));
+    }
+
+}

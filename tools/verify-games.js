@@ -343,6 +343,43 @@ async function main() {
       return stored.indexOf('"difficulty":"easy"') !== -1;
     });
 
+    // ---------------- stroop (composed screen, direct home tile) ----------------
+    await check('stroop: home tile -> composed face/word stage + controls', async () => {
+      await nav('stroopGame');
+      await dismiss();
+      return await evaluate(`(() => {
+        const p = document.getElementById('stroopGame');
+        const face = document.getElementById('stroopFace');
+        const word = document.getElementById('stroopWord');
+        return !!p && p.classList.contains('game-screen')
+          && !!p.querySelector('.stroop-stage')
+          && !!face && face.complete && face.naturalWidth > 0
+          && !!word && word.textContent.length > 0
+          && !!p.querySelector('#stroopPositiveBtn') && !!p.querySelector('#stroopNegativeBtn')
+          && !!p.querySelector('#stroopPlayBtn') && !!p.querySelector('#stroopSpeedDisplay');
+      })()`) === true;
+    });
+    await check('stroop: J answer produces feedback and speed controls work', async () => {
+      const before = await evaluate(`document.getElementById('stroopSpeedDisplay').textContent`);
+      await clickSel('#stroopSpeedUp');
+      await delay(150);
+      const after = await evaluate(`document.getElementById('stroopSpeedDisplay').textContent`);
+      await clickSel('#stroopSpeedDown');
+      await delay(150);
+      await key('j');
+      await delay(250);
+      const feedback = await evaluate(`!!document.querySelector('#stroopStage .feedback-pill')`);
+      return Number(after) === Number(before) + 1 && feedback === true;
+    });
+    await check('stroop: rule text switches between face and word target', async () => {
+      await clickSel('#stroopRuleText');
+      await delay(250);
+      await evaluate(`(() => { const b = [...document.querySelectorAll('.btn-option')].find(x => x.textContent.indexOf('睇文字') !== -1); if (b) b.click(); return !!b; })()`);
+      await delay(350);
+      const mode = await evaluate(`document.getElementById('stroopModeLabel').textContent`);
+      return mode === '文字';
+    });
+
     // ---------------- summary ----------------
     console.log('pageErrors=' + JSON.stringify(errors));
     const pass = failures.length === 0 && errors.length === 0;

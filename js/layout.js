@@ -16,7 +16,7 @@
             // 各遊戲的「舞台」容器（flex:1，決定格線可用空間）
             const STAGE_SELECTORS =
                 '.grid-wrapper, .different-grid-wrapper, .gng-grid-wrapper, ' +
-                '.nback-grid-wrapper, .dual-stage, .shopping-stage';
+                '.nback-grid-wrapper, .dual-stage, .shopping-stage, .stroop-stage';
 
             function measureStageHeight(container) {
                 const stage = container.querySelector(STAGE_SELECTORS);
