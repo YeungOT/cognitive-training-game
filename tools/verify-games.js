@@ -343,43 +343,89 @@ async function main() {
       return stored.indexOf('"difficulty":"easy"') !== -1;
     });
 
-    // ---------------- stroop (composed screen, direct home tile) ----------------
-    await check('stroop: home tile -> composed face/word stage + controls', async () => {
+    // ---------------- stroop (single face-target game, manual/auto pacing) ----------------
+    await check('stroop: home tile -> paused face/word stage + shared buttons', async () => {
       await nav('stroopGame');
+      await delay(600);
       await dismiss();
-      return await evaluate(`(() => {
+      const game = await evaluate(`(() => {
         const p = document.getElementById('stroopGame');
         const face = document.getElementById('stroopFace');
         const word = document.getElementById('stroopWord');
-        return !!p && p.classList.contains('game-screen')
-          && !!p.querySelector('.stroop-stage')
-          && !!face && face.complete && face.naturalWidth > 0
-          && !!word && word.textContent.length > 0
-          && !!p.querySelector('#stroopPositiveBtn') && !!p.querySelector('#stroopNegativeBtn')
-          && !!p.querySelector('#stroopPlayBtn') && !!p.querySelector('#stroopSpeedDisplay');
-      })()`) === true;
+        return {
+          screen: !!p && p.classList.contains('game-screen'),
+          stage: !!p.querySelector('.stroop-stage'),
+          imageLoaded: !!face && face.complete && face.naturalWidth > 0,
+          word: !!word && word.textContent.length > 0,
+          paused: !document.getElementById('stroopPlayBtn').classList.contains('playing'),
+          speed: document.getElementById('stroopSpeedDisplay').textContent,
+          goButton: document.getElementById('stroopPositiveBtn').classList.contains('go-btn'),
+          nogoButton: document.getElementById('stroopNegativeBtn').classList.contains('nogo-btn'),
+          noTitle: !document.getElementById('stroopRuleText'),
+          noPhaseHint: !document.getElementById('stroopPhaseHint'),
+          noSettings: !document.getElementById('stroopSettings')
+        };
+      })()`);
+      return game.screen && game.stage && game.imageLoaded && game.word
+        && game.paused && game.speed === '5'
+        && game.goButton && game.nogoButton
+        && game.noTitle && game.noPhaseHint && game.noSettings;
     });
-    await check('stroop: J answer produces feedback and speed controls work', async () => {
-      const before = await evaluate(`document.getElementById('stroopSpeedDisplay').textContent`);
+    await check('stroop: red unboxed word uses the larger size', async () => {
+      const style = await evaluate(`(() => {
+        const w = document.getElementById('stroopWord');
+        const cs = getComputedStyle(w);
+        return {
+          color: cs.color,
+          background: cs.backgroundColor,
+          boxShadow: cs.boxShadow,
+          fontSize: parseFloat(cs.fontSize)
+        };
+      })()`);
+      return style.color === 'rgb(211, 47, 47)'
+        && style.background === 'rgba(0, 0, 0, 0)'
+        && style.boxShadow === 'none'
+        && style.fontSize > 55;
+    });
+    await check('stroop: manual mode waits, then the image click advances', async () => {
+      const before = await evaluate(`document.getElementById('stroopFace').src`);
+      await delay(4500);
+      const still = await evaluate(`document.getElementById('stroopFace').src`);
+      await clickSel('#stroopStage');
+      await delay(250);
+      const after = await evaluate(`document.getElementById('stroopFace').src`);
+      return before === still && after !== before;
+    });
+    await check('stroop: play starts auto-advance and speed changes the interval', async () => {
+      const paused = await evaluate(`!document.getElementById('stroopPlayBtn').classList.contains('playing')`);
+      await clickSel('#stroopPlayBtn');
+      await delay(250);
+      const playing = await evaluate(`document.getElementById('stroopPlayBtn').classList.contains('playing')`);
+      const before = await evaluate(`document.getElementById('stroopFace').src`);
+      await delay(4500);
+      const after = await evaluate(`document.getElementById('stroopFace').src`);
+      const speedBefore = await evaluate(`document.getElementById('stroopSpeedDisplay').textContent`);
       await clickSel('#stroopSpeedUp');
       await delay(150);
-      const after = await evaluate(`document.getElementById('stroopSpeedDisplay').textContent`);
-      await clickSel('#stroopSpeedDown');
-      await delay(150);
+      const speedAfter = await evaluate(`document.getElementById('stroopSpeedDisplay').textContent`);
+      await clickSel('#stroopPlayBtn');
+      await delay(250);
+      const stopped = await evaluate(`!document.getElementById('stroopPlayBtn').classList.contains('playing')`);
+      return paused && playing && after !== before
+        && Number(speedAfter) === Number(speedBefore) + 1 && stopped;
+    });
+    await check('stroop: response feedback in manual mode waits for the image click', async () => {
       await key('j');
       await delay(250);
       const feedback = await evaluate(`!!document.querySelector('#stroopStage .feedback-pill')`);
-      return Number(after) === Number(before) + 1 && feedback === true;
-    });
-    await check('stroop: rule text switches between face and word target', async () => {
-      await clickSel('#stroopRuleText');
+      const before = await evaluate(`document.getElementById('stroopFace').src`);
+      await delay(800);
+      const still = await evaluate(`document.getElementById('stroopFace').src`);
+      await clickSel('#stroopStage');
       await delay(250);
-      await evaluate(`(() => { const b = [...document.querySelectorAll('.btn-option')].find(x => x.textContent.indexOf('睇文字') !== -1); if (b) b.click(); return !!b; })()`);
-      await delay(350);
-      const mode = await evaluate(`document.getElementById('stroopModeLabel').textContent`);
-      return mode === '文字';
+      const after = await evaluate(`document.getElementById('stroopFace').src`);
+      return feedback === true && before === still && after !== before;
     });
-
     // ---------------- summary ----------------
     console.log('pageErrors=' + JSON.stringify(errors));
     const pass = failures.length === 0 && errors.length === 0;

@@ -79,14 +79,6 @@
                 switchFreq: { type: 'number', enum: [5, 10, 15, 20] }
             }
         },
-        cognitiveStroopPrefs: {
-            format: 'json',
-            default: { mode: 'face', speed: 5 },
-            fields: {
-                mode: { type: 'string', enum: ['face', 'word'] },
-                speed: { type: 'number', enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }
-            }
-        },
         cognitiveDifferentPrefs: {
             format: 'json',
             default: { imageCount: 4 },

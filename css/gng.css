@@ -313,49 +313,6 @@
         [data-theme="dark"] .nback-controls .notmatch-btn { background: #b71c1c; box-shadow: var(--btn-shadow-wrong); }
         [data-theme="dark"] .nback-controls .notmatch-btn:hover { background: var(--btn-hover-wrong); box-shadow: var(--btn-shadow-wrong); }
 
-        /* Go / No Go 按鈕 */
-        .gng-controls .go-btn,
-        .gng-controls .nogo-btn {
-            border: none;
-            border-radius: calc(40px * var(--ui-scale));
-            padding: calc(10px * var(--ui-scale)) calc(28px * var(--ui-scale));
-            font-size: calc(32px * var(--ui-scale));
-            font-weight: 700;
-            color: #fff;
-            cursor: pointer;
-            transition: var(--btn-transition);
-            font-family: inherit;
-            -webkit-tap-highlight-color: transparent;
-            height: var(--row-action-h);
-            min-width: var(--row-action-min-w);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 calc(6px * var(--ui-scale)) 0 rgba(0,0,0,0.2);
-        }
-        .gng-controls .go-btn {
-            background: var(--highlight-correct);
-            box-shadow: var(--btn-shadow-correct);
-        }
-        .gng-controls .go-btn:hover {
-            background: var(--btn-hover-correct);
-            transform: translateY(calc(-2px * var(--ui-scale)));
-            box-shadow: var(--btn-shadow-correct);
-        }
-        .gng-controls .nogo-btn {
-            background: var(--highlight-wrong);
-            box-shadow: var(--btn-shadow-wrong);
-        }
-        .gng-controls .nogo-btn:hover {
-            background: var(--btn-hover-wrong);
-            transform: translateY(calc(-2px * var(--ui-scale)));
-            box-shadow: var(--btn-shadow-wrong);
-        }
-        [data-theme="dark"] .gng-controls .go-btn { background: #0d47a1; box-shadow: var(--btn-shadow-correct); }
-        [data-theme="dark"] .gng-controls .go-btn:hover { background: var(--btn-hover-correct); box-shadow: var(--btn-shadow-correct); }
-        [data-theme="dark"] .gng-controls .nogo-btn { background: #b71c1c; box-shadow: var(--btn-shadow-wrong); }
-        [data-theme="dark"] .gng-controls .nogo-btn:hover { background: var(--btn-hover-wrong); box-shadow: var(--btn-shadow-wrong); }
-
         /* Enlarged minus/plus glyphs for text-based speed buttons (matches single N-back icon size) */
         .speed-btn {
             display: flex;

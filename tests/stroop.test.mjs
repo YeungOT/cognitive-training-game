@@ -7,6 +7,8 @@ const stroop = require('../js/food/stroop.js');
 const logic = require('../js/food/stroop-logic.js');
 const session = require('../js/food/stroop-session.js');
 const screen = require('../js/food/stroop-screen.js');
+const playback = require('../js/food/stroop-playback.js');
+const response = require('../js/food/stroop-response.js');
 const view = require('../js/food/stroop-view.js');
 const faceSet = require('../js/celebrity-faces.js');
 
@@ -18,13 +20,13 @@ function makeRandom() {
     };
 }
 
-test('module exposes the seam: mount, logic, screen and view', function () {
+test('module exposes the seam: mount, logic, session, screen, playback, response and view', function () {
     assert.equal(typeof stroop.mount, 'function');
     assert.equal(typeof logic.buildStroopSequence, 'function');
-    assert.equal(typeof logic.evaluateStroopResponse, 'function');
-    assert.equal(typeof logic.summariseStroopTrials, 'function');
     assert.equal(typeof session.createStroopSession, 'function');
     assert.equal(typeof screen.createStroopScreenDefinition, 'function');
+    assert.equal(typeof playback.createStroopPlayback, 'function');
+    assert.equal(typeof response.createStroopResponse, 'function');
     assert.equal(typeof view.createStroopEls, 'function');
 });
 
@@ -34,33 +36,35 @@ test('mount returns null without a document or required dependencies', function 
     assert.equal(stroop.mount({ ownerDocument: { getElementById: function () { return null; } } }, {}), null);
     assert.equal(stroop.mount({
         ownerDocument: { getElementById: function () { return null; } }
-    }, { faceSet: faceSet, logic: logic, stroopScreen: screen, view: view }), null);
+    }, {
+        faceSet: faceSet,
+        logic: logic,
+        session: session,
+        screen: screen,
+        playback: playback,
+        response: response,
+        view: view
+    }), null);
 });
 
-test('screen definition follows the shared Game Screen contract', function () {
+test('screen definition is the single face-target game screen', function () {
     const definition = screen.createStroopScreenDefinition();
     assert.equal(definition.game.topBar.backId, 'stroopBackBtn');
+    assert.equal(definition.game.topBar.titleId, undefined);
     assert.equal(definition.game.topBar.scoreId, 'stroopScoreNum');
     assert.equal(definition.game.stage.id, 'stroopStage');
-    assert.equal(definition.game.footer.className, 'bottom-controls');
+    assert.equal(definition.game.stage.children.length, 1);
+    assert.equal(definition.game.stage.children[0].id, 'stroopFaceWrap');
     assert.equal(definition.game.footer.controls.left.children.length, 2);
+    assert.equal(definition.game.footer.controls.children[0].className, 'go-btn');
+    assert.equal(definition.game.footer.controls.children[1].className, 'nogo-btn');
     assert.equal(definition.settings, undefined);
-    const answerButtons = definition.game.footer.controls.children;
-    assert.equal(answerButtons.length, 2);
-    assert.equal(answerButtons[0].id, 'stroopPositiveBtn');
-    assert.equal(answerButtons[1].id, 'stroopNegativeBtn');
-});
-
-test('mode list is the two-way contract used by the game and settings', function () {
-    assert.deepEqual(logic.STROOP_MODES, ['face', 'word']);
 });
 
 test('generated trials use only shipped faces and the expected word labels', function () {
     const sequence = logic.buildStroopSequence({
         faces: faceSet.listFaces(),
-        mode: 'face',
-        measuredCount: 48,
-        practiceCount: 6,
+        count: 48,
         random: makeRandom()
     });
     const shippedSources = new Set(faceSet.listFaces().map(face => face.src));

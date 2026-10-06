@@ -20,14 +20,14 @@ function makeClock() {
 }
 
 const sequence = [
-    { phase: 'practice', condition: 'congruent', targetAnswer: 'positive' },
-    { phase: 'measured', condition: 'incongruent', targetAnswer: 'negative' },
-    { phase: 'measured', condition: 'neutral', targetAnswer: 'positive' }
+    { condition: 'congruent', targetAnswer: 'positive' },
+    { condition: 'incongruent', targetAnswer: 'negative' },
+    { condition: 'neutral', targetAnswer: 'positive' }
 ];
 
 test('session advances through the sequence and records responses', function () {
     const clock = makeClock();
-    const session = sessionModule.createStroopSession({ logic: logic, mode: 'face', sequence: sequence, clock: clock.now });
+    const session = sessionModule.createStroopSession({ logic: logic, sequence: sequence, clock: clock.now });
 
     const first = session.advance();
     assert.equal(first, sequence[0]);
@@ -36,7 +36,7 @@ test('session advances through the sequence and records responses', function () 
     const practice = session.answer('positive');
     assert.equal(practice.correct, true);
     assert.equal(practice.rtMs, 10);
-    assert.equal(session.score(), 0);
+    assert.equal(session.score(), 1);
     assert.equal(session.canAnswer(), false);
     assert.equal(session.answer('negative'), null);
 
@@ -44,12 +44,12 @@ test('session advances through the sequence and records responses', function () 
     assert.equal(second, sequence[1]);
     clock.set(25);
     assert.equal(session.answer('positive').correct, false);
-    assert.equal(session.score(), 0);
+    assert.equal(session.score(), 1);
 
     assert.equal(session.advance(), sequence[2]);
     clock.set(40);
     assert.equal(session.answer('positive').correct, true);
-    assert.equal(session.score(), 1);
+    assert.equal(session.score(), 2);
 
     assert.equal(session.advance(), null);
     assert.equal(session.isFinished(), true);
@@ -61,7 +61,7 @@ test('session advances through the sequence and records responses', function () 
 
 test('session records an unanswered trial as a timeout', function () {
     const clock = makeClock();
-    const session = sessionModule.createStroopSession({ logic: logic, mode: 'word', sequence: sequence.slice(0, 2), clock: clock.now });
+    const session = sessionModule.createStroopSession({ logic: logic, sequence: sequence.slice(0, 2), clock: clock.now });
     session.advance();
     session.advance();
     assert.equal(session.advance(), null);
@@ -74,13 +74,23 @@ test('session records an unanswered trial as a timeout', function () {
     });
 });
 
+test('manual advance can skip an unanswered trial without recording a timeout', function () {
+    const session = sessionModule.createStroopSession({
+        logic: logic,
+        sequence: sequence.slice(0, 1)
+    });
+    session.advance();
+    assert.equal(session.advance({ recordTimeout: false }), null);
+    assert.deepEqual(session.records(), []);
+});
+
 test('reset clears score, records and current trial', function () {
-    const session = sessionModule.createStroopSession({ logic: logic, mode: 'face', sequence: sequence });
+    const session = sessionModule.createStroopSession({ logic: logic, sequence: sequence });
     session.advance();
     session.answer('positive');
     session.advance();
     session.answer('negative');
-    assert.equal(session.score(), 1);
+    assert.equal(session.score(), 2);
     session.reset([]);
     assert.equal(session.current(), null);
     assert.equal(session.score(), 0);

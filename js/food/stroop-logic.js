@@ -1,12 +1,11 @@
 (function (global) {
     'use strict';
 
-    // Pure Stroop trial generation and scoring. No DOM, no timers, no globals:
-    // callers inject the face list, the neutral word list, the mode and a random
-    // function so the whole module is testable through this interface.
+    // Pure face-target Stroop trial generation and scoring. No DOM, no timers,
+    // no target-mode branch: the face is always the target and the word is the
+    // distractor.
 
     var STROOP_CONDITIONS = ['congruent', 'incongruent', 'neutral'];
-    var STROOP_MODES = ['face', 'word'];
 
     var WORD_LABELS = {
         happy: '開心',
@@ -70,20 +69,8 @@
     function assertBuildInputs(options) {
         if (!options || typeof options !== 'object') throw new Error('Stroop build options are required');
         if (!Array.isArray(options.faces) || options.faces.length === 0) throw new Error('Stroop build requires faces');
-        if (STROOP_MODES.indexOf(options.mode) === -1) throw new Error('Unknown Stroop mode: ' + options.mode);
-        if (!Number.isInteger(options.measuredCount) || options.measuredCount <= 0) throw new Error('measuredCount must be a positive integer');
-        if (options.measuredCount % STROOP_CONDITIONS.length !== 0) throw new Error('measuredCount must divide evenly across conditions');
-        var practiceCount = options.practiceCount === undefined ? 0 : options.practiceCount;
-        if (!Number.isInteger(practiceCount) || practiceCount < 0) throw new Error('practiceCount must be a non-negative integer');
-        if (practiceCount % STROOP_CONDITIONS.length !== 0) throw new Error('practiceCount must divide evenly across conditions');
-    }
-
-    function countFacesByExpression(faces) {
-        var counts = {};
-        faces.forEach(function (face) {
-            counts[face.expressionKey] = (counts[face.expressionKey] || 0) + 1;
-        });
-        return counts;
+        if (!Number.isInteger(options.count) || options.count <= 0) throw new Error('count must be a positive integer');
+        if (options.count % STROOP_CONDITIONS.length !== 0) throw new Error('count must divide evenly across conditions');
     }
 
     function buildPools(faces, neutralWords, random) {
@@ -95,13 +82,11 @@
         if (!byExpression.happy || !byExpression.sad) {
             throw new Error('Stroop build requires both happy and sad faces');
         }
-        var pools = {
-            happy: createPool(byExpression.happy, random),
-            sad: createPool(byExpression.sad, random)
-        };
-        if (byExpression.neutral) pools.neutral = createPool(byExpression.neutral, random);
         return {
-            facePools: pools,
+            facePools: {
+                happy: createPool(byExpression.happy, random),
+                sad: createPool(byExpression.sad, random)
+            },
             wordPools: {
                 happy: createPool(['happy'], random),
                 sad: createPool(['sad'], random),
@@ -110,7 +95,7 @@
         };
     }
 
-    function buildSpecs(condition, countPerCondition, mode) {
+    function buildSpecs(condition, countPerCondition) {
         if (countPerCondition % 2 !== 0) throw new Error('Each condition needs an even trial count');
         var specs = [];
         for (var i = 0; i < countPerCondition / 2; i++) {
@@ -120,21 +105,15 @@
             } else if (condition === 'incongruent') {
                 specs.push({ condition: condition, faceExpression: 'happy', wordKey: 'sad' });
                 specs.push({ condition: condition, faceExpression: 'sad', wordKey: 'happy' });
-            } else if (mode === 'face') {
+            } else {
                 specs.push({ condition: condition, faceExpression: 'happy', wordKey: 'neutral' });
                 specs.push({ condition: condition, faceExpression: 'sad', wordKey: 'neutral' });
-            } else {
-                specs.push({ condition: condition, faceExpression: 'neutral', wordKey: 'happy' });
-                specs.push({ condition: condition, faceExpression: 'neutral', wordKey: 'sad' });
             }
         }
         return specs;
     }
 
-    function materialize(spec, mode, pools) {
-        if (spec.faceExpression === 'neutral' && !pools.facePools.neutral) {
-            throw new Error('Word-target neutral trials require neutral faces');
-        }
+    function materialize(spec, pools) {
         var face = pools.facePools[spec.faceExpression].next();
         var word;
         if (spec.wordKey === 'neutral') {
@@ -142,21 +121,17 @@
         } else {
             word = { key: spec.wordKey, label: WORD_LABELS[spec.wordKey], valence: WORD_VALENCES[spec.wordKey] };
         }
-        var targetAnswer = mode === 'face'
-            ? valenceToAnswer(face.valence)
-            : valenceToAnswer(word.valence);
         return {
-            phase: spec.phase,
             condition: spec.condition,
             face: face,
             word: word,
-            targetAnswer: targetAnswer,
+            targetAnswer: valenceToAnswer(face.valence),
             congruent: spec.condition === 'congruent'
         };
     }
 
-    function limitConditionRuns(trials, random, maxRun) {
-        var result = shuffle(trials, random);
+    function limitConditionRuns(specs, random, maxRun) {
+        var result = shuffle(specs, random);
         for (var i = maxRun; i < result.length; i++) {
             var runLength = 1;
             for (var j = i - 1; j >= 0 && result[j].condition === result[i].condition; j--) runLength++;
@@ -173,49 +148,18 @@
         return result;
     }
 
-    function buildBlockSpecs(countPerCondition, phase, mode, random) {
-        var specs = [];
-        STROOP_CONDITIONS.forEach(function (condition) {
-            specs = specs.concat(buildSpecs(condition, countPerCondition, mode));
-        });
-        specs = limitConditionRuns(specs, random, 2);
-        specs.forEach(function (spec) {
-            spec.phase = phase;
-        });
-        return specs;
-    }
-
-    function avoidBoundaryRun(practiceSpecs, measuredSpecs) {
-        if (practiceSpecs.length < 2 || measuredSpecs.length < 2) return measuredSpecs;
-        var tail = practiceSpecs[practiceSpecs.length - 1].condition;
-        var beforeTail = practiceSpecs[practiceSpecs.length - 2].condition;
-        if (tail !== beforeTail || measuredSpecs[0].condition !== tail) return measuredSpecs;
-        for (var i = 1; i < measuredSpecs.length; i++) {
-            if (measuredSpecs[i].condition !== tail) {
-                var swap = measuredSpecs[0];
-                measuredSpecs[0] = measuredSpecs[i];
-                measuredSpecs[i] = swap;
-                break;
-            }
-        }
-        return measuredSpecs;
-    }
-
     function buildStroopSequence(options) {
         assertBuildInputs(options);
         var random = options.random || Math.random;
         var neutralWords = options.neutralWords || DEFAULT_NEUTRAL_WORDS;
         if (!Array.isArray(neutralWords) || neutralWords.length === 0) throw new Error('Stroop build requires neutral words');
         var pools = buildPools(options.faces, neutralWords, random);
-        var practiceCount = options.practiceCount === undefined ? 0 : options.practiceCount;
-        var practiceSpecs = [];
-        var measuredSpecs = buildBlockSpecs(options.measuredCount / STROOP_CONDITIONS.length, 'measured', options.mode, random);
-        if (practiceCount > 0) {
-            practiceSpecs = buildBlockSpecs(practiceCount / STROOP_CONDITIONS.length, 'practice', options.mode, random);
-            measuredSpecs = avoidBoundaryRun(practiceSpecs, measuredSpecs);
-        }
-        return practiceSpecs.concat(measuredSpecs).map(function (spec) {
-            return materialize(spec, options.mode, pools);
+        var specs = [];
+        STROOP_CONDITIONS.forEach(function (condition) {
+            specs = specs.concat(buildSpecs(condition, options.count / STROOP_CONDITIONS.length));
+        });
+        return limitConditionRuns(specs, random, 2).map(function (spec) {
+            return materialize(spec, pools);
         });
     }
 
@@ -229,14 +173,6 @@
         var sorted = values.slice().sort(function (a, b) { return a - b; });
         var mid = Math.floor(sorted.length / 2);
         return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-    }
-
-    // Response window per speed: 5000 ms at speed 1, 3000 ms at speed 5,
-    // 1500 ms at speed 10. The Activity controller accepts this mapping directly.
-    function windowMsForSpeed(speed) {
-        var clamped = Math.max(1, Math.min(10, speed));
-        if (clamped <= 5) return 5000 - (clamped - 1) * 500;
-        return 3000 - (clamped - 5) * 300;
     }
 
     function summariseStroopTrials(records) {
@@ -274,12 +210,10 @@
 
     var api = {
         STROOP_CONDITIONS: STROOP_CONDITIONS,
-        STROOP_MODES: STROOP_MODES,
         DEFAULT_NEUTRAL_WORDS: DEFAULT_NEUTRAL_WORDS,
         buildStroopSequence: buildStroopSequence,
         evaluateStroopResponse: evaluateStroopResponse,
         summariseStroopTrials: summariseStroopTrials,
-        windowMsForSpeed: windowMsForSpeed,
         median: median
     };
 

@@ -49,11 +49,11 @@ The choice is a real trade-off. Face-target remains playable without literacy, b
 
 ## Design implications
 
-- Use both task directions, but make face-target the default because it remains playable without literacy. Treat word-target as the stronger response-conflict mode and do not offer read-aloud as a fallback inside it.
+- Implement the face-target direction for v1 because it remains playable without literacy; the word-target direction is deferred.
 - Use happy and sad for v1. They are the balanced pair with older-adult evidence; collapsing all six expressions into positive/negative confounds valence with specific emotion.
 - Include a matched neutral-word condition. It is the only way to separate a generic emotional slowdown from response conflict.
 - Mix conditions inside the block rather than blocking them. Blocked designs inflate the slow component, and Algom et al. showed the effect can vanish in mixed blocks.
-- Treat 2000 ms as the research reference window, not the care-home default. Use 3000 ms by default and keep the 96-trial 75/25 and 50/50 profile as a deferred assessment mode.
+- Treat 2000 ms as the research reference window, not the care-home default. Follow the existing reaction-game pacing: the round opens paused and the therapist advances by clicking the image; the play button starts auto-advance at the speed set by the shared speed control. Keep the 96-trial 75/25 and 50/50 profile as a deferred assessment mode.
 - Log accuracy and reaction time per condition, but present the interference effect only as an exploratory within-session number, never as a diagnosis.
 - Expect engagement from celebrity faces, but not a large interference effect from fame alone. The active ingredient is the emotional expression and its relevance to the player.
 

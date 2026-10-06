@@ -1,16 +1,14 @@
 (function (global) {
     'use strict';
 
+    // Screen definition for the single face-target emotional face-word Stroop.
+    // The game has no settings screen: it opens directly from the home tile.
+
     function createStroopScreenDefinition() {
         return {
             game: {
                 topBar: {
                     backId: 'stroopBackBtn',
-                    titleId: 'stroopRuleText',
-                    titleChildren: [
-                        { text: '睇 ' },
-                        { id: 'stroopModeLabel', className: 'stroop-mode-label', text: '表情' }
-                    ],
                     scoreId: 'stroopScoreNum',
                     hamburgerId: 'hamburgerBtnStroop'
                 },
@@ -36,12 +34,6 @@
                                     text: ''
                                 }
                             ]
-                        },
-                        {
-                            tagName: 'div',
-                            id: 'stroopPhaseHint',
-                            className: 'stroop-phase-hint hidden',
-                            text: ''
                         }
                     ]
                 },
@@ -95,10 +87,10 @@
                                 }
                             ]
                         },
-                        className: 'center-group stroop-controls',
+                        className: 'center-group action-controls',
                         children: [
-                            { tagName: 'button', id: 'stroopPositiveBtn', className: 'stroop-answer-btn stroop-positive', text: '開心' },
-                            { tagName: 'button', id: 'stroopNegativeBtn', className: 'stroop-answer-btn stroop-negative', text: '唔開心' }
+                            { tagName: 'button', id: 'stroopPositiveBtn', className: 'go-btn', text: '開心' },
+                            { tagName: 'button', id: 'stroopNegativeBtn', className: 'nogo-btn', text: '不開心' }
                         ]
                     }
                 }

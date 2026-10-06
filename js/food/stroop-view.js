@@ -1,8 +1,9 @@
 (function (global) {
     'use strict';
 
-    // Direct DOM adapter for the Stroop screen. No game state or timing here;
-    // the game module injects the trial and reads the collected elements.
+    // Direct DOM adapter for the Stroop game and settings screens. No game
+    // state or timing here; the game module injects the trial and reads the
+    // collected elements.
 
     function createStroopEls(doc) {
         function byId(id) { return doc.getElementById(id); }
@@ -11,10 +12,7 @@
             faceWrap: byId('stroopFaceWrap'),
             face: byId('stroopFace'),
             word: byId('stroopWord'),
-            phaseHint: byId('stroopPhaseHint'),
             scoreNum: byId('stroopScoreNum'),
-            ruleText: byId('stroopRuleText'),
-            modeLabel: byId('stroopModeLabel'),
             playBtn: byId('stroopPlayBtn'),
             speedDisplay: byId('stroopSpeedDisplay'),
             speedDown: byId('stroopSpeedDown'),
@@ -31,11 +29,7 @@
         els.face.alt = trial.face.expressionLabel;
         els.word.textContent = trial.word.label;
         els.stage.dataset.condition = trial.condition;
-        els.stage.dataset.phase = trial.phase;
         els.stage.classList.remove('stroop-empty');
-        var practice = trial.phase === 'practice';
-        els.phaseHint.textContent = practice ? '練習' : '';
-        els.phaseHint.classList.toggle('hidden', !practice);
     }
 
     function clearStroopStage(els) {
@@ -43,21 +37,12 @@
         els.face.removeAttribute('src');
         els.face.alt = '';
         els.word.textContent = '';
-        els.phaseHint.textContent = '';
-        els.phaseHint.classList.add('hidden');
         els.stage.classList.add('stroop-empty');
         els.stage.removeAttribute('data-condition');
-        els.stage.removeAttribute('data-phase');
     }
 
     function setScore(els, score) {
         if (els && els.scoreNum) els.scoreNum.textContent = String(score);
-    }
-
-    function setRuleText(els, mode) {
-        if (!els || !els.modeLabel) return;
-        els.modeLabel.textContent = mode === 'word' ? '文字' : '表情';
-        if (els.ruleText) els.ruleText.dataset.mode = mode;
     }
 
     function setSpeed(els, speed) {
@@ -80,29 +65,57 @@
         }
     }
 
-    function showIntro(message, mode) {
+    // Same instruction-message shape as Go/No-Go: title only, extra large.
+    function showIntro(message) {
         if (!message) return;
-        var faceMode = mode === 'face';
         message.show({
-            icon: '🎭',
-            title: faceMode ? '睇表情，答開心定唔開心' : '睇文字，答開心定唔開心',
-            subtitle: faceMode ? '唔好理個字。6次練習之後開始計分。' : '唔好理個表情。6次練習之後開始計分。',
-            buttons: [{ text: '開始', className: 'btn-stay' }],
-            pauseTimer: true
+            title: '請觀看表情，回答「開心」或「不開心」',
+            subtitle: '',
+            extraLarge: true,
+            pauseTimer: false
         });
     }
 
-    function showModeSwitch(message, mode, onSelect) {
+    function showRoundComplete(message, score, total, onRestart, onBack) {
         if (!message) return;
         message.show({
-            title: '🔄 切換玩法',
-            subtitle: '切換後會由頭開始這一回',
+            icon: '🏆',
+            title: '本回合完成',
+            subtitle: '答對 ' + score + ' / ' + total + ' 題',
             buttons: [
-                { text: (mode === 'face' ? '✅ ' : '') + '睇表情', className: 'btn-stay', action: function () { onSelect('face'); } },
-                { text: (mode === 'word' ? '✅ ' : '') + '睇文字', className: 'btn-stay', action: function () { onSelect('word'); } }
+                { text: '重新開始', className: 'btn-stay', action: onRestart },
+                { text: '返回', className: 'btn-stay', action: onBack }
             ],
             pauseTimer: false
         });
+    }
+
+    function bindStroopControls(els, keyboard, listenOpts, handlers) {
+        handlers = handlers || {};
+        if (els.backBtn) {
+            els.backBtn.addEventListener('click', function () { if (handlers.onBack) handlers.onBack(); }, listenOpts);
+        }
+        if (els.playBtn) {
+            els.playBtn.addEventListener('click', function () { if (handlers.onPlayPause) handlers.onPlayPause(); }, listenOpts);
+        }
+        if (els.speedDown) {
+            els.speedDown.addEventListener('click', function () { if (handlers.onSpeed) handlers.onSpeed(-1); }, listenOpts);
+        }
+        if (els.speedUp) {
+            els.speedUp.addEventListener('click', function () { if (handlers.onSpeed) handlers.onSpeed(1); }, listenOpts);
+        }
+        if (els.positiveBtn) {
+            els.positiveBtn.addEventListener('click', function () { if (handlers.onPositive) handlers.onPositive(); }, listenOpts);
+        }
+        if (els.negativeBtn) {
+            els.negativeBtn.addEventListener('click', function () { if (handlers.onNegative) handlers.onNegative(); }, listenOpts);
+        }
+        if (els.stage) {
+            els.stage.addEventListener('click', function () { if (handlers.onAdvance) handlers.onAdvance(); }, listenOpts);
+        }
+        if (keyboard) {
+            keyboard.registerScreen('stroopGame', handlers.keyboard || {});
+        }
     }
 
     var api = {
@@ -110,13 +123,13 @@
         renderStroopTrial: renderStroopTrial,
         clearStroopStage: clearStroopStage,
         setScore: setScore,
-        setRuleText: setRuleText,
         setSpeed: setSpeed,
         syncPlayButton: syncPlayButton,
         flashStage: flashStage,
         clearFlash: clearFlash,
         showIntro: showIntro,
-        showModeSwitch: showModeSwitch
+        showRoundComplete: showRoundComplete,
+        bindStroopControls: bindStroopControls
     };
 
     if (typeof module !== 'undefined' && module.exports) module.exports = api;

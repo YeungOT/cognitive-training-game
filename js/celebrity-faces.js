@@ -31,7 +31,7 @@
 
     // v1 ships only the expressions the game can currently show. The full
     // expression list above still defines the domain for later games.
-    var SHIPPED_EXPRESSION_KEYS = ['happy', 'sad', 'neutral'];
+    var SHIPPED_EXPRESSION_KEYS = ['happy', 'sad'];
 
     function freezeRecord(record) {
         return Object.freeze(record);

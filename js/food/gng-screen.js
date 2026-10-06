@@ -78,7 +78,7 @@
                                 ] }
                             ]
                         },
-                        className: 'center-group gng-controls',
+                        className: 'center-group gng-controls action-controls',
                         children: [
                             { tagName: 'button', id: 'gngGoBtn', className: 'go-btn', text: '✅' },
                             { tagName: 'button', id: 'gngNoGoBtn', className: 'nogo-btn', text: '❌' }

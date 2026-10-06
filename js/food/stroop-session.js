@@ -8,7 +8,6 @@
     function createStroopSession(options) {
         options = options || {};
         var logic = options.logic;
-        var mode = options.mode;
         var clock = options.clock || function () { return Date.now(); };
         if (!logic) throw new Error('Stroop session requires logic');
 
@@ -20,20 +19,19 @@
         var records = [];
         var startedAt = 0;
 
-        function recordTimeout() {
+        function recordTimeoutIfUnanswered() {
             if (!currentTrial || responded) return;
             records.push({
                 condition: currentTrial.condition,
-                phase: currentTrial.phase,
-                mode: mode,
                 correct: false,
                 rtMs: null,
                 timeout: true
             });
         }
 
-        function advance() {
-            recordTimeout();
+        function advance(options) {
+            var shouldRecordTimeout = !options || options.recordTimeout !== false;
+            if (shouldRecordTimeout) recordTimeoutIfUnanswered();
             index++;
             if (index >= sequence.length) {
                 currentTrial = null;
@@ -57,13 +55,11 @@
             var correct = logic.evaluateStroopResponse(currentTrial, answerKey);
             records.push({
                 condition: currentTrial.condition,
-                phase: currentTrial.phase,
-                mode: mode,
                 correct: correct,
                 rtMs: rtMs,
                 timeout: false
             });
-            if (correct && currentTrial.phase === 'measured') score++;
+            if (correct) score++;
             return { correct: correct, rtMs: rtMs, trial: currentTrial };
         }
 
