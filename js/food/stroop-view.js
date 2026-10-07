@@ -82,6 +82,7 @@
             icon: '🏆',
             title: '本回合完成',
             subtitle: '答對 ' + score + ' / ' + total + ' 題',
+            dismissible: false,
             buttons: [
                 { text: '重新開始', className: 'btn-stay', action: onRestart },
                 { text: '返回', className: 'btn-stay', action: onBack }

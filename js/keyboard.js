@@ -117,9 +117,12 @@
             });
             if (action === 'dismiss-message') {
                 event.preventDefault();
-                if (global.CognitiveMessage &&
-                    typeof global.CognitiveMessage.dismiss === 'function') {
-                    global.CognitiveMessage.dismiss();
+                if (global.CognitiveMessage) {
+                    if (typeof global.CognitiveMessage.requestDismiss === 'function') {
+                        global.CognitiveMessage.requestDismiss();
+                    } else if (typeof global.CognitiveMessage.dismiss === 'function') {
+                        global.CognitiveMessage.dismiss();
+                    }
                 }
                 return;
             }

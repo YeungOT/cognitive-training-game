@@ -228,6 +228,7 @@
         message.show({
             title: `${icon || '🎉'} 你已認識所有「${category}」的食物！`,
             subtitle: '太棒了！繼續挑戰其他類別吧！',
+            dismissible: false,
             buttons: [{ text: '返回選單', className: 'btn-stay', action: onBack }]
         });
     }
@@ -237,6 +238,7 @@
             title: '🏆 恭喜你！',
             subtitle: '你已經認識了所有類別的所有食物！\n你是真正的食物大師！ 🎉',
             isVictory: true,
+            dismissible: false,
             buttons: [{ text: '🔄 重新開始', className: 'btn-restart', action: onRestart }]
         });
     }

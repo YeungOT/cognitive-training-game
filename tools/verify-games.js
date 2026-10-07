@@ -239,7 +239,9 @@ async function main() {
       await delay(1600);
       const score = await evaluate(`document.getElementById('shoppingScoreNum').textContent`);
       const progress = await evaluate(`document.getElementById('shoppingProgress').textContent`);
-      return recallCards === 6 && score === '3' && progress.indexOf('3 / 3') !== -1;
+      const completionLocked = await evaluate(`CognitiveMessage.isActive() && CognitiveMessage.requestDismiss() === false`);
+      await dismiss();
+      return recallCards === 6 && score === '3' && progress.indexOf('3 / 3') !== -1 && completionLocked;
     });
     await check('shopping: name toggle shared with food singleton', async () => {
       await clickSel('#shoppingNameToggleBtn');
@@ -425,6 +427,31 @@ async function main() {
       await delay(250);
       const after = await evaluate(`document.getElementById('stroopFace').src`);
       return feedback === true && before === still && after !== before;
+    });
+    await check('completion message ignores backdrop and Escape until its button is used', async () => {
+      await evaluate(`(() => {
+        window.__completionAction = false;
+        CognitiveMessage.show({
+          title: '本回合完成',
+          dismissible: false,
+          pauseTimer: false,
+          buttons: [{
+            text: '返回',
+            action: function () { window.__completionAction = true; }
+          }]
+        });
+        return CognitiveMessage.isActive();
+      })()`);
+      await evaluate(`document.getElementById('overlay').dispatchEvent(new MouseEvent('click', { bubbles: true }))`);
+      await delay(100);
+      const afterBackdrop = await evaluate(`CognitiveMessage.isActive()`);
+      await key('Escape');
+      const afterEscape = await evaluate(`CognitiveMessage.isActive()`);
+      await clickSel('#msgButtons button');
+      await delay(100);
+      const actionRan = await evaluate(`window.__completionAction === true`);
+      const closed = await evaluate(`!CognitiveMessage.isActive()`);
+      return afterBackdrop && afterEscape && actionRan && closed;
     });
     // ---------------- summary ----------------
     console.log('pageErrors=' + JSON.stringify(errors));

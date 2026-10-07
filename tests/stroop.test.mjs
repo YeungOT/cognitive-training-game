@@ -61,6 +61,18 @@ test('screen definition is the single face-target game screen', function () {
     assert.equal(definition.settings, undefined);
 });
 
+test('round completion requires a button action', function () {
+    let shown = null;
+    view.showRoundComplete({
+        show: function (options) {
+            shown = options;
+        }
+    }, 10, 48, function () {}, function () {});
+
+    assert.equal(shown.dismissible, false);
+    assert.equal(shown.buttons.length, 2);
+});
+
 test('generated trials use only shipped faces and the expected word labels', function () {
     const sequence = logic.buildStroopSequence({
         faces: faceSet.listFaces(),

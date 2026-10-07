@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url);
 const food = require('../js/food/food.js');
 const logic = require('../js/food/food-logic.js');
 const foodData = require('../js/food/food-data.js');
+const view = require('../js/food/food-view.js');
 
 const FOOD_DATA = foodData.FOOD_DATA;
 const CATEGORY_NAMES = foodData.CATEGORY_NAMES;
@@ -73,4 +74,20 @@ test('pickFoodDistractors returns imageCount-1 unique distractors excluding the 
         assert.ok(distractors.every(function (d) { return d.name !== correct.name; }));
         assert.equal(new Set(distractors.map(function (d) { return d.name; })).size, 3);
     }
+});
+
+test('food completion messages require a button action', function () {
+    const shown = [];
+    const message = {
+        show: function (options) {
+            shown.push(options);
+        }
+    };
+
+    view.showCategoryComplete(message, '水果', '🍎', function () {});
+    view.showVictoryScreen(message, function () {});
+
+    assert.equal(shown.length, 2);
+    assert.equal(shown[0].dismissible, false);
+    assert.equal(shown[1].dismissible, false);
 });

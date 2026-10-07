@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url);
 const shopping = require('../js/food/shopping.js');
 const logic = require('../js/food/shopping-logic.js');
 const foodData = require('../js/food/food-data.js');
+const view = require('../js/food/shopping-view.js');
 
 const FOOD_DATA = foodData.FOOD_DATA;
 const shuffle = foodData.shuffle;
@@ -54,4 +55,16 @@ test('buildShoppingRound produces food items with name/image/category', function
     r.list.forEach(function (i) {
         assert.ok(i.name && i.image && i.category);
     });
+});
+
+test('shopping completion requires a button action', function () {
+    let shown = null;
+    view.showComplete({
+        show: function (options) {
+            shown = options;
+        }
+    }, 3, 3, function () {});
+
+    assert.equal(shown.dismissible, false);
+    assert.equal(shown.buttons.length, 1);
 });

@@ -185,6 +185,12 @@
             closeFlow(currentFlow, false);
         }
 
+        function requestDismiss() {
+            if (!currentFlow || currentFlow.options.dismissible === false) return false;
+            dismiss();
+            return true;
+        }
+
         function handleButton(button) {
             var flow = currentFlow;
             if (!flow) return;
@@ -201,6 +207,7 @@
             show: show,
             dismiss: dismiss,
             close: close,
+            requestDismiss: requestDismiss,
             isActive: function () {
                 return currentFlow !== null;
             }
@@ -211,8 +218,8 @@
                 if (e.target !== overlay) return;
                 var now = Date.now();
                 if (now - lastBackdropDismissAt < 350) return;
+                if (!requestDismiss()) return;
                 lastBackdropDismissAt = now;
-                dismiss();
             });
         }
 

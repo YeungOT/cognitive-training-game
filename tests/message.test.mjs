@@ -29,7 +29,8 @@ function createFakeElement(tag) {
     };
 }
 
-function createFixture() {
+function createFixture(options) {
+    options = options || {};
     const overlay = createFakeElement('overlay');
     const msgIcon = createFakeElement('span');
     const documentFragments = [];
@@ -65,7 +66,7 @@ function createFixture() {
             return node;
         },
         pauseCoordinator,
-        attachBackdrop: false
+        attachBackdrop: options.attachBackdrop === true
     });
 
     return {
@@ -81,6 +82,9 @@ function createFixture() {
             const group = msgButtons.children[0];
             const button = group.children[index];
             button.listeners.click[0]();
+        },
+        clickBackdrop() {
+            overlay.listeners.click[0]({ target: overlay });
         }
     };
 }
@@ -108,6 +112,73 @@ test('dismiss closes the flow and calls onDismiss once', function () {
 
     fixture.controller.dismiss();
     assert.equal(dismisses, 1);
+});
+
+test('backdrop dismissal still closes a normal message', function () {
+    const fixture = createFixture({ attachBackdrop: true });
+    let dismisses = 0;
+
+    fixture.controller.show({
+        title: '一般提示',
+        onDismiss: () => {
+            dismisses++;
+        }
+    });
+
+    fixture.clickBackdrop();
+
+    assert.equal(dismisses, 1);
+    assert.equal(fixture.controller.isActive(), false);
+});
+
+test('non-dismissible message ignores backdrop dismissal but keeps its button action', function () {
+    const fixture = createFixture({ attachBackdrop: true });
+    let actions = 0;
+    let dismisses = 0;
+
+    fixture.controller.show({
+        title: '本回合完成',
+        dismissible: false,
+        buttons: [{
+            text: '重新開始',
+            action: () => {
+                actions++;
+            }
+        }],
+        onDismiss: () => {
+            dismisses++;
+        }
+    });
+
+    assert.equal(fixture.controller.requestDismiss(), false);
+    fixture.clickBackdrop();
+
+    assert.equal(dismisses, 0);
+    assert.equal(fixture.controller.isActive(), true);
+
+    fixture.clickButton(0);
+
+    assert.equal(actions, 1);
+    assert.equal(fixture.controller.isActive(), false);
+});
+
+test('non-dismissible message can still be closed programmatically', function () {
+    const fixture = createFixture({ attachBackdrop: true });
+    let dismisses = 0;
+
+    fixture.controller.show({
+        title: '本回合完成',
+        dismissible: false,
+        onDismiss: () => {
+            dismisses++;
+        }
+    });
+
+    fixture.clickBackdrop();
+    fixture.controller.dismiss();
+
+    assert.equal(dismisses, 1);
+    assert.equal(fixture.controller.isActive(), false);
 });
 
 test('button action runs and suppresses onDismiss', function () {

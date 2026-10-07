@@ -330,6 +330,7 @@
         message.show({
             title: '🎉 買餸完成！',
             subtitle: `你正確揀選了 ${listLength} 樣食物，總得分 ${score}！`,
+            dismissible: false,
             buttons: [{
                 text: '下一輪 ➜',
                 className: 'btn-restart',

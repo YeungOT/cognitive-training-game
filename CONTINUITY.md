@@ -2,9 +2,9 @@
 
 ## Snapshot — ≤ 25 lines
 - Goal: add an emotional face–word Stroop game to cognitive-training-pwa using the repaired celebrity expression Face Set.
-- Now: simplified single face-target game verified 2026-10-07 (no settings/mode, no practice phase, 48 scored trials, red unboxed ×3 word, 20 shipped images, formal written Chinese, manual/autoplay pacing). Uncommitted on top of pushed commits 6101d89/4dbebd5.
-- Next: user browser-verification on a real care-home device, then decide whether to commit/push the simplification and whether to build the deferred 96-trial assessment mode.
-- Open questions: none for the Stroop v1 design. Deferred: 96-trial assessment profile, word-target direction, five-expression identity mode, therapist summary screen, full 60-image offline pack. Standing: iPadOS on-device safe-area values UNCONFIRMED; earlier memory-game/registry WIP and iPad letterboxing work are unchanged.
+- Now: simplified single face-target Stroop is implemented, and completion/result dialogs now require a button action while normal messages keep backdrop/Esc dismissal.
+- Next: review and commit the completion-dialog fix; then continue real-device care-home verification of the Stroop game.
+- Open questions: none for the modal-lock change; deferred Stroop assessment/identity/summary work is unchanged. Standing: iPadOS on-device safe-area values UNCONFIRMED.
 
 ## Done (recent)
 - 2026-08-21T16:52:30+08:00 [CODE] Fix rotating icon direction: portraitLockTurn 0 → -360deg (anticlockwise) in both games' css/unified.css; sw.js regenerated; pushed both repos (colour 87e40bc, cognitive 61caa8b). Icon is ⟲ (anticlockwise arrow) but previously spun clockwise.
@@ -719,3 +719,11 @@
 - [CODE] Shipped images reduced from 30 to 20: the 10 neutral `*_canonical.webp` files were removed from the PWA assets. The Face Set manifest still defines all six expression keys and marks neutral as unshipped for future games.
 - [TOOL] Verification: `npm test` 174/174; `verify:games` PASS (home tile -> paused game; red unboxed ×3 word; manual wait + image-click advance; play/speed auto-advance; manual response waits for the image click; no page errors); `verify:parity` PASS; `verify:back` PASS (`stroopGame -> home`); `verify:offline` PASS with 464 assets after the `sw.js` regeneration. `verify:layout` was green before the simplification; the final parity gate measures the same stage/footer.
 - [CODE] UNCOMMITTED on top of the pushed commits `6101d89` and `4dbebd5`. Not committed or pushed.
+
+### Completion messages are button-only (2026-10-07)
+- [USER] Reported that the message after all cards are played must not close from a tap outside the box and believed the shared message component affected all games.
+- [CODE] Added `dismissible` to `js/food/message.js` (default `true`) and `requestDismiss()` for user-initiated dismissal. Backdrop clicks and keyboard Esc go through `requestDismiss()`; `dismiss()` and `close()` remain programmatic force paths.
+- [CODE] Marked terminal result dialogs `dismissible:false`: Stroop round completion, Food category completion and victory, and Shopping completion. Instructions, saves, recall prompts and Shopping timeout remain normally dismissible.
+- [CODE] Added unit coverage for normal backdrop dismissal, blocked backdrop/request dismissal, button-only close and programmatic close; added view-level assertions for all four completion call sites; added a browser regression check plus Shopping completion integration assertion.
+- [TOOL] Verification: `npm test` 180/180; `verify:games` PASS including the button-only modal check; `verify:parity` PASS; `verify:layout` PASS; `verify:boot` PASS; `verify:edge` PASS; `verify:back` PASS; `verify:offline` PASS with 464 assets (218 offline images checked, 0 failures); `sw.js` regenerated; `node --check` and `git diff --check` clean (line-ending warnings only).
+- [CODE] UNCOMMITTED: the modal-lock implementation, tests, ledger and regenerated `sw.js`.
