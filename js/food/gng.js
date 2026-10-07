@@ -29,8 +29,9 @@
         var syncTopBarCentering = deps.syncTopBarCentering || (typeof global.syncTopBarCentering === 'function' ? global.syncTopBarCentering : null);
         var gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
         var gngScreen = deps.gngScreen || (typeof global.CognitiveGngScreen !== 'undefined' ? global.CognitiveGngScreen : null);
+        var faceContent = deps.faceContent || (typeof global.CognitiveFaceGameContent !== 'undefined' ? global.CognitiveFaceGameContent : null);
 
-        if (!logic || !view || !activityFactory || !gameScreen || !gngScreen) return null;
+        if (!logic || !view || !activityFactory || !gameScreen || !gngScreen || !faceContent) return null;
         var FOOD_DATA = foodData.FOOD_DATA;
         var CATEGORY_NAMES = foodData.CATEGORY_NAMES;
         var pickRandom = foodData.pickRandom;
@@ -44,6 +45,8 @@
         var els = view.createGngEls(doc);
 
         var state = {
+            contentMode: 'food',
+            faceTargetExpression: 'happy',
             goCategory: '水果',
             noGoCategory: '全部',
             autoSwitch: false,
@@ -66,6 +69,12 @@
         };
 
         var gngPreferences = prefs ? prefs.load('cognitiveGngPrefs') : null;
+        if (gngPreferences) {
+            state.contentMode = gngPreferences.contentMode === 'faces' ? 'faces' : 'food';
+            state.faceTargetExpression = gngPreferences.faceTargetExpression || 'happy';
+            state.goCategory = gngPreferences.goCategory;
+            state.noGoCategory = gngPreferences.noGoCategory;
+        }
         var controller = new AbortController();
         var listenOpts = { signal: controller.signal };
 
@@ -97,27 +106,64 @@
             gngActivity.reset();
         }
 
-        function buildSequence(length) {
-            return logic.generateGngSequence({
-                length: length,
-                goCategory: state.goCategory,
-                noGoCategory: state.noGoCategory,
-                imageCount: state.imageCount,
-                foodData: FOOD_DATA,
+        function getActiveContent() {
+            if (state.contentMode === 'faces') {
+                return {
+                    items: faceContent.listItems({ dimension: 'expression' }),
+                    categoryNames: faceContent.expressionOptions().map(function (item) { return item.value; }),
+                    pickRandom: pickRandom,
+                    getItemId: getFoodId,
+                    goCategory: state.faceTargetExpression,
+                    noGoCategory: '全部'
+                };
+            }
+            return {
+                items: FOOD_DATA,
                 categoryNames: CATEGORY_NAMES,
                 pickRandom: pickRandom,
-                getFoodId: getFoodId
+                getItemId: getFoodId,
+                goCategory: state.goCategory,
+                noGoCategory: state.noGoCategory
+            };
+        }
+
+        function getCategoryDisplay(category) {
+            if (category === '全部') return '其他';
+            if (state.contentMode !== 'faces') return category;
+            var match = faceContent.expressionOptions().filter(function (item) {
+                return item.value === category;
+            })[0];
+            return match ? match.label : category;
+        }
+
+        function buildSequence(length) {
+            var content = getActiveContent();
+            return logic.generateGngSequence({
+                length: length,
+                goCategory: content.goCategory,
+                noGoCategory: content.noGoCategory,
+                imageCount: state.imageCount,
+                foodData: content.items,
+                categoryNames: content.categoryNames,
+                pickRandom: content.pickRandom,
+                getFoodId: content.getItemId
             });
         }
 
         function getGngRule() {
-            return { goCat: state.goCategory, noGoCat: state.noGoCategory };
+            var content = getActiveContent();
+            return {
+                goCat: content.goCategory,
+                noGoCat: content.noGoCategory,
+                goDisplay: getCategoryDisplay(content.goCategory),
+                noGoDisplay: getCategoryDisplay(content.noGoCategory)
+            };
         }
 
         function updateGngRuleDisplay(showPopup) {
-            const { goCat, noGoCat } = getGngRule();
-            view.updateRuleLabels(els, goCat, noGoCat);
-            if (showPopup) view.showRuleChangePopup(message, goCat, noGoCat);
+            const rule = getGngRule();
+            view.updateRuleLabels(els, rule.goDisplay, rule.noGoDisplay);
+            if (showPopup) view.showRuleChangePopup(message, rule.goDisplay, rule.noGoDisplay);
         }
 
         function showGngIntro() {
@@ -125,16 +171,28 @@
         }
 
         function isGngGo(items) {
-            return logic.isGngGoFor(items, state.goCategory, state.noGoCategory);
+            var content = getActiveContent();
+            return logic.isGngGoFor(items, content.goCategory, content.noGoCategory);
         }
         function switchGngTask() {
-            const allCats = ['全部', ...CATEGORY_NAMES];
+            const content = getActiveContent();
+            if (state.contentMode === 'faces') {
+                const candidates = content.categoryNames.filter(function (key) {
+                    return key !== state.faceTargetExpression;
+                });
+                if (candidates.length === 0) return;
+                state.faceTargetExpression = pickRandom(candidates);
+                updateGngRuleDisplay(true);
+                state.sequence = buildSequence(state.sequence.length);
+                return;
+            }
+            const allCats = ['全部', ...content.categoryNames];
             const currentGo = state.goCategory;
             const currentNoGo = state.noGoCategory;
 
             if (state.switchType === 'random') {
                 if (currentNoGo === '全部') {
-                    let candidates = CATEGORY_NAMES.filter(c => c !== currentGo);
+                    let candidates = content.categoryNames.filter(c => c !== currentGo);
                     if (candidates.length === 0) return;
                     state.goCategory = pickRandom(candidates);
                     state.noGoCategory = '全部';
@@ -143,7 +201,7 @@
                     return;
                 }
                 if (currentGo === '全部') {
-                    let candidates = CATEGORY_NAMES.filter(c => c !== currentNoGo);
+                    let candidates = content.categoryNames.filter(c => c !== currentNoGo);
                     if (candidates.length === 0) return;
                     state.noGoCategory = pickRandom(candidates);
                     state.goCategory = '全部';
@@ -151,13 +209,13 @@
                     state.sequence = buildSequence(state.sequence.length);
                     return;
                 }
-                let goCandidates = CATEGORY_NAMES.filter(c => c !== currentGo && c !== currentNoGo);
-                let noGoCandidates = CATEGORY_NAMES.filter(c => c !== currentGo && c !== currentNoGo);
+                let goCandidates = content.categoryNames.filter(c => c !== currentGo && c !== currentNoGo);
+                let noGoCandidates = content.categoryNames.filter(c => c !== currentGo && c !== currentNoGo);
                 if (goCandidates.length === 0 || noGoCandidates.length === 0) return;
                 state.goCategory = pickRandom(goCandidates);
                 state.noGoCategory = pickRandom(noGoCandidates);
                 if (state.goCategory === state.noGoCategory) {
-                    const backup = CATEGORY_NAMES.filter(c => c !== state.goCategory);
+                    const backup = content.categoryNames.filter(c => c !== state.goCategory);
                     if (backup.length > 0) {
                         state.noGoCategory = pickRandom(backup);
                     }
@@ -311,8 +369,15 @@
             }
         }
         function startGngFromSettings() {
-            state.goCategory = els.goCategory.value;
-            state.noGoCategory = els.noGoCategory.value;
+            state.contentMode = els.contentMode.value === 'faces' ? 'faces' : 'food';
+            state.faceTargetExpression = els.faceTargetExpression.value || 'happy';
+            if (state.contentMode === 'faces') {
+                state.goCategory = state.faceTargetExpression;
+                state.noGoCategory = '全部';
+            } else {
+                state.goCategory = els.goCategory.value;
+                state.noGoCategory = els.noGoCategory.value;
+            }
             if (state.goCategory !== '全部' && state.goCategory === state.noGoCategory) {
                 const others = CATEGORY_NAMES.filter(function (c) { return c !== state.goCategory; });
                 if (others.length > 0) state.noGoCategory = pickRandom(others);
@@ -328,6 +393,7 @@
             state.currentIndex = -1;
             state.currentItems = [];
             state.matchPending = false;
+            view.syncContentRows(els, state.contentMode);
             state.sequence = buildSequence(50);
             if (router) {
                 if (router.navigate('gngGame')) {
@@ -346,69 +412,90 @@
             }
         }
 
+        function randomizeGngTarget() {
+            const content = getActiveContent();
+            if (state.contentMode === 'faces') {
+                const candidates = content.categoryNames.filter(function (key) {
+                    return key !== state.faceTargetExpression;
+                });
+                if (candidates.length === 0) return;
+                state.faceTargetExpression = pickRandom(candidates);
+            } else if (state.noGoCategory === '全部') {
+                const candidates = content.categoryNames.filter(function (category) {
+                    return category !== state.goCategory;
+                });
+                if (candidates.length === 0) return;
+                state.goCategory = pickRandom(candidates);
+                state.noGoCategory = '全部';
+            } else if (state.goCategory === '全部') {
+                const candidates = content.categoryNames.filter(function (category) {
+                    return category !== state.noGoCategory;
+                });
+                if (candidates.length === 0) return;
+                state.noGoCategory = pickRandom(candidates);
+                state.goCategory = '全部';
+            } else {
+                const goCandidates = content.categoryNames.filter(function (category) {
+                    return category !== state.goCategory && category !== state.noGoCategory;
+                });
+                const noGoCandidates = content.categoryNames.filter(function (category) {
+                    return category !== state.goCategory && category !== state.noGoCategory;
+                });
+                if (goCandidates.length === 0 || noGoCandidates.length === 0) return;
+                state.goCategory = pickRandom(goCandidates);
+                state.noGoCategory = pickRandom(noGoCandidates);
+                if (state.goCategory === state.noGoCategory) {
+                    const backup = content.categoryNames.filter(function (category) {
+                        return category !== state.goCategory;
+                    });
+                    if (backup.length > 0) state.noGoCategory = pickRandom(backup);
+                }
+            }
+            updateGngRuleDisplay(true);
+            state.sequence = buildSequence(state.sequence.length);
+            state.roundCounter = 0;
+            resetGngTimer();
+        }
+
+        function swapGngTarget() {
+            if (state.contentMode === 'faces') return;
+            const temp = state.goCategory;
+            state.goCategory = state.noGoCategory;
+            state.noGoCategory = temp;
+            updateGngRuleDisplay(true);
+            state.sequence = buildSequence(state.sequence.length);
+            state.roundCounter = 0;
+            resetGngTimer();
+        }
+
         function onRuleTextClick(e) {
             e.stopPropagation();
-            const currentGo = state.goCategory;
-            const currentNoGo = state.noGoCategory;
-            const goDisplay = currentGo === '全部' ? '其他' : currentGo;
-            const noGoDisplay = currentNoGo === '全部' ? '其他' : currentNoGo;
+            const rule = getGngRule();
+            const buttons = [{
+                text: '🎲 隨機變更',
+                className: 'btn-stay',
+                action: randomizeGngTarget
+            }];
+            if (state.contentMode !== 'faces') {
+                buttons.push({
+                    text: '🔄 互換',
+                    className: 'btn-stay',
+                    action: swapGngTarget
+                });
+            }
 
             message.show({
                 title: '🔄 立即切換任務',
-                subtitle: `目前：✅ ${goDisplay} → ❌ ${noGoDisplay}`,
-                buttons: [{
-                    text: '🎲 隨機變更',
-                    className: 'btn-stay',
-                    action: function () {
-                        const currentGo2 = state.goCategory;
-                        const currentNoGo2 = state.noGoCategory;
-                        if (currentNoGo2 === '全部') {
-                            let candidates = CATEGORY_NAMES.filter(c => c !== currentGo2);
-                            if (candidates.length === 0) return;
-                            state.goCategory = pickRandom(candidates);
-                            state.noGoCategory = '全部';
-                        } else if (currentGo2 === '全部') {
-                            let candidates = CATEGORY_NAMES.filter(c => c !== currentNoGo2);
-                            if (candidates.length === 0) return;
-                            state.noGoCategory = pickRandom(candidates);
-                            state.goCategory = '全部';
-                        } else {
-                            let goCandidates = CATEGORY_NAMES.filter(c => c !== currentGo2 && c !== currentNoGo2);
-                            let noGoCandidates = CATEGORY_NAMES.filter(c => c !== currentGo2 && c !== currentNoGo2);
-                            if (goCandidates.length === 0 || noGoCandidates.length === 0) return;
-                            state.goCategory = pickRandom(goCandidates);
-                            state.noGoCategory = pickRandom(noGoCandidates);
-                            if (state.goCategory === state.noGoCategory) {
-                                const backup = CATEGORY_NAMES.filter(c => c !== state.goCategory);
-                                if (backup.length > 0) {
-                                    state.noGoCategory = pickRandom(backup);
-                                }
-                            }
-                        }
-                        updateGngRuleDisplay(true);
-                        state.sequence = buildSequence(state.sequence.length);
-                        state.roundCounter = 0;
-                        resetGngTimer();
-                    }
-                }, {
-                    text: '🔄 互換',
-                    className: 'btn-stay',
-                    action: function () {
-                        const temp = state.goCategory;
-                        state.goCategory = state.noGoCategory;
-                        state.noGoCategory = temp;
-                        updateGngRuleDisplay(true);
-                        state.sequence = buildSequence(state.sequence.length);
-                        state.roundCounter = 0;
-                        resetGngTimer();
-                    }
-                }],
+                subtitle: `目前：✅ ${rule.goDisplay} → ❌ ${rule.noGoDisplay}`,
+                buttons: buttons,
                 pauseTimer: false
             });
         }
 
         function saveGngSettings() {
             const prefsObj = {
+                contentMode: els.contentMode.value,
+                faceTargetExpression: els.faceTargetExpression.value,
                 goCategory: els.goCategory.value,
                 noGoCategory: els.noGoCategory.value,
                 autoSwitch: state.autoSwitch,
@@ -476,8 +563,10 @@
         });
 
         els.speedDisplay.textContent = state.speed;
+        els.contentMode.value = state.contentMode;
         els.goCategory.value = '水果';
         els.noGoCategory.value = '全部';
+        els.faceTargetExpression.value = state.faceTargetExpression;
         view.syncAutoToggle(els.autoToggle, false);
         els.switchType.value = 'swap';
         els.switchFreq.value = '10';
@@ -487,6 +576,7 @@
             state.autoSwitch = gngPreferences.autoSwitch;
             view.syncAutoToggle(els.autoToggle, state.autoSwitch);
         }
+        view.syncContentRows(els, state.contentMode);
 
         if (router) {
             router.defineScreen('gngSettings', {
@@ -528,6 +618,7 @@
                     logic: window.CognitiveGngLogic,
                     gameScreen: window.CognitiveGameScreen,
                     gngScreen: window.CognitiveGngScreen,
+                    faceContent: window.CognitiveFaceGameContent,
                     view: window.CognitiveGngView,
                     prefs: window.CognitivePrefs,
                     activity: window.CognitiveActivity,

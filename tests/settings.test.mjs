@@ -170,13 +170,18 @@ test('default store owns the expected keys and returns defaults', function () {
     assert.equal(store.keys.music, 'cognitiveAppMusic');
     assert.equal(store.keys.sfx, 'cognitiveAppSfx');
     assert.equal(store.keys.gng, 'cognitiveGngPrefs');
+    assert.equal(store.keys.nback, 'cognitiveNbackPrefs');
     assert.equal(store.keys.different, 'cognitiveDifferentPrefs');
     assert.equal(store.keys.pairs, 'cognitivePairsPrefs');
     assert.equal(store.keys.shopping, 'cognitiveShoppingPrefs');
     assert.equal(store.keys.reality, 'realityOrientationSettings');
     assert.deepEqual(store.load(store.keys.theme), { theme: 'light' });
     assert.deepEqual(store.load(store.keys.music), { music: true });
-    assert.deepEqual(store.load(store.keys.pairs), { pairCount: 4, previewTime: 'manual' });
+    assert.deepEqual(store.load(store.keys.pairs), {
+        contentMode: 'food',
+        pairCount: 4,
+        previewTime: 'manual'
+    });
     assert.deepEqual(store.load(store.keys.reality), {
         weather: '晴',
         season: '自動',

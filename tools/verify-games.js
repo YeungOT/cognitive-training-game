@@ -123,6 +123,33 @@ async function main() {
       const paused = !(await evaluate(`document.getElementById('nbackPlayBtn').classList.contains('playing')`));
       return playing && speed === '6' && step !== '#1' && paused;
     });
+    await check('nback: identity and expression modes render celebrity faces', async () => {
+      await evaluate(`(() => {
+        const select = document.getElementById('nbackContentModeSelect');
+        select.value = 'faceIdentity';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      })()`);
+      await delay(200);
+      await dismiss();
+      await clickSel('#nbackPlayBtn');
+      await delay(600);
+      const identitySrc = await evaluate(`document.getElementById('nbackImage').src`);
+      await clickSel('#nbackPlayBtn');
+      await evaluate(`(() => {
+        const select = document.getElementById('nbackContentModeSelect');
+        select.value = 'faceExpression';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      })()`);
+      await delay(200);
+      await dismiss();
+      await clickSel('#nbackPlayBtn');
+      await delay(600);
+      const expressionSrc = await evaluate(`document.getElementById('nbackImage').src`);
+      return identitySrc.indexOf('/assets/celebrity-faces/') !== -1
+        && expressionSrc.indexOf('/assets/celebrity-faces/') !== -1;
+    });
 
     // ---------------- dual-nback ----------------
     await check('dual-nback: settings -> start -> grid + 2 match buttons', async () => {
@@ -152,6 +179,26 @@ async function main() {
       await delay(150);
       return true; // no exception is the assertion (errors captured globally)
     });
+    await check('dual-nback: identity and expression face pair renders one face', async () => {
+      await nav('dualNbackSettings');
+      await evaluate(`(() => {
+        const a = document.getElementById('dualModality1Select');
+        const b = document.getElementById('dualModality2Select');
+        a.value = 'identity';
+        b.value = 'expression';
+        a.dispatchEvent(new Event('change', { bubbles: true }));
+        b.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      })()`);
+      await delay(200);
+      const enabled = await evaluate(`!document.getElementById('dualStartBtn').disabled`);
+      await clickSel('#dualStartBtn');
+      await delay(600);
+      const src = await evaluate(`document.getElementById('dualNbackImage').src`);
+      const labels = await evaluate(`Array.from(document.querySelectorAll('#dualNbackMatchButtons .dual-match-btn')).map(function (b) { return b.textContent; })`);
+      return enabled && src.indexOf('/assets/celebrity-faces/') !== -1
+        && labels.indexOf('身份') !== -1 && labels.indexOf('表情') !== -1;
+    });
 
     // ---------------- gng ----------------
     await check('gng: settings -> start -> 1-card grid + rule labels', async () => {
@@ -177,6 +224,22 @@ async function main() {
       await delay(300);
       return true;
     });
+    await check('gng: face target expression uses celebrity faces', async () => {
+      await nav('gngSettings');
+      await evaluate(`(() => {
+        document.getElementById('gngContentMode').value = 'faces';
+        document.getElementById('gngFaceTargetExpression').value = 'neutral';
+        document.getElementById('gngStartBtn').click();
+        return true;
+      })()`);
+      await delay(700);
+      await dismiss();
+      const goLabel = await evaluate(`document.getElementById('gngGoLabel').textContent`);
+      const noGoLabel = await evaluate(`document.getElementById('gngNoGoLabel').textContent`);
+      const src = await evaluate(`document.querySelector('#gngGridContainer .gng-card img').src`);
+      return goLabel === '無表情' && noGoLabel === '其他'
+        && src.indexOf('/assets/celebrity-faces/') !== -1;
+    });
 
     // ---------------- different ----------------
     await check('different: start -> 4 cards, click correct scores 1', async () => {
@@ -188,6 +251,20 @@ async function main() {
       await delay(800);
       const score = await evaluate(`document.getElementById('differentScoreNum').textContent`);
       return cards === 4 && score === '1';
+    });
+    await check('different: face expression mode renders celebrity faces', async () => {
+      await evaluate(`(() => {
+        const select = document.getElementById('differentContentMode');
+        select.value = 'face';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      })()`);
+      await delay(300);
+      const cards = await countSel('#differentGridContainer .different-card');
+      const src = await evaluate(`document.querySelector('#differentGridContainer .different-card img').src`);
+      const hint = await evaluate(`document.getElementById('differentHint').textContent`);
+      return cards === 4 && src.indexOf('/assets/celebrity-faces/') !== -1
+        && hint.indexOf('表情') !== -1;
     });
 
 
@@ -211,6 +288,33 @@ async function main() {
       await delay(500);
       const score = await evaluate(`document.getElementById('pairsScoreNum').textContent`);
       return cards === 8 && score === '1';
+    });
+    await check('pairs: same-expression mode pairs different people', async () => {
+      await nav('pairsSettings');
+      await evaluate(`(() => {
+        const select = document.getElementById('pairsContentMode');
+        select.value = 'faces';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      })()`);
+      await clickSel('#pairsStartBtn');
+      await delay(500);
+      await dismiss();
+      const result = await evaluate(`(() => {
+        const cards = Array.from(document.querySelectorAll('#pairsGridContainer .memory-card'));
+        const byPair = {};
+        cards.forEach(function (card) {
+          if (!byPair[card.dataset.pairId]) byPair[card.dataset.pairId] = [];
+          byPair[card.dataset.pairId].push(card.querySelector('img').src);
+        });
+        const groups = Object.keys(byPair).map(function (key) { return byPair[key]; });
+        return {
+          cards: cards.length,
+          allFaces: cards.every(function (card) { return card.querySelector('img').src.indexOf('/assets/celebrity-faces/') !== -1; }),
+          distinctImages: groups.every(function (group) { return group.length === 2 && group[0] !== group[1]; })
+        };
+      })()`);
+      return result.cards === 8 && result.allFaces && result.distinctImages;
     });
 
     // ---------------- shopping ----------------

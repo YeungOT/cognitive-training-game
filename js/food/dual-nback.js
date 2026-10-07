@@ -16,6 +16,8 @@
 
         var foodData = deps.foodData || (typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null);
         if (!foodData) return null;
+        var faceContent = deps.faceContent || (typeof global.CognitiveFaceGameContent !== 'undefined' ? global.CognitiveFaceGameContent : null);
+        var faceNbackLogic = deps.faceNbackLogic || (typeof global.CognitiveFaceNbackLogic !== 'undefined' ? global.CognitiveFaceNbackLogic : null);
         var logic = deps.logic || (typeof global.CognitiveDualNbackLogic !== 'undefined' ? global.CognitiveDualNbackLogic : null);
         var view = deps.view || (typeof global.CognitiveDualNbackView !== 'undefined' ? global.CognitiveDualNbackView : null);
         var sequence = deps.sequence || (typeof global.CognitiveSequence !== 'undefined' ? global.CognitiveSequence : null);
@@ -30,7 +32,7 @@
         var gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
         var dualScreen = deps.dualScreen || (typeof global.CognitiveDualNbackScreen !== 'undefined' ? global.CognitiveDualNbackScreen : null);
 
-        if (!logic || !view || !sequence || !activityFactory || !gameScreen || !dualScreen) return null;
+        if (!logic || !faceContent || !faceNbackLogic || !view || !sequence || !activityFactory || !gameScreen || !dualScreen) return null;
         var FOOD_DATA = foodData.FOOD_DATA;
         var DUAL_SEQ_LEN = logic.DUAL_NBACK_SEQUENCE_LENGTH;
         var DUAL_LABELS = logic.DUAL_MODALITY_LABELS;
@@ -76,6 +78,15 @@
         });
 
         function buildDualSequences(seedTails) {
+            if (state.modalities.indexOf('identity') !== -1 || state.modalities.indexOf('expression') !== -1) {
+                state.sequences = faceNbackLogic.buildDualFaceSequences({
+                    n: state.n,
+                    length: DUAL_SEQ_LEN,
+                    faces: faceContent.listItems({ dimension: 'expression' }),
+                    matchProbability: sequence.matchProbability
+                });
+                return;
+            }
             state.sequences = logic.generateDualSequences(state.modalities, state.n, DUAL_SEQ_LEN, state.positionGrid, state.colorPalette, FOOD_DATA, DUAL_GRIDS, DUAL_PALETTES, sequence, seedTails);
         }
 
@@ -248,6 +259,11 @@
             if (!modality1 || !modality2 || modality1 === modality2) return;
             const needsPosition = modality1 === 'position' || modality2 === 'position';
             const needsColor = modality1 === 'color' || modality2 === 'color';
+            const hasIdentity = modality1 === 'identity' || modality2 === 'identity';
+            const hasExpression = modality1 === 'expression' || modality2 === 'expression';
+            const hasAudio = modality1 === 'audio' || modality2 === 'audio';
+            if ((hasIdentity || hasExpression) &&
+                !(hasIdentity && hasExpression && !needsPosition && !needsColor && !hasAudio)) return;
             if (needsPosition && !els.positionGridSelect.value) return;
             if (needsColor && !els.colorPaletteSelect.value) return;
 
@@ -351,7 +367,9 @@
         // Transitional self-mount preserving the original load-time behaviour.
         // Later strangler steps move this call into the router/orchestrator.
         api.mount(document, {
-            foodData: window.CognitiveFoodData,
+                    foodData: window.CognitiveFoodData,
+                    faceContent: window.CognitiveFaceGameContent,
+                    faceNbackLogic: window.CognitiveFaceNbackLogic,
             logic: window.CognitiveDualNbackLogic,
             view: window.CognitiveDualNbackView,
             sequence: window.CognitiveSequence,

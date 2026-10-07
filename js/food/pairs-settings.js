@@ -5,13 +5,16 @@
 
     function loadPairsPreferences(prefs) {
         const stored = prefs ? prefs.load('cognitivePairsPrefs') : null;
+        const contentMode = stored && (stored.contentMode === 'food' || stored.contentMode === 'faces')
+            ? stored.contentMode
+            : 'food';
         const pairCount = stored && stored.pairCount >= 3 && stored.pairCount <= 5
             ? stored.pairCount
             : 4;
         const previewTime = stored && PREVIEW_TIMES.indexOf(stored.previewTime) !== -1
             ? stored.previewTime
             : 'manual';
-        return { pairCount: pairCount, previewTime: previewTime };
+        return { contentMode: contentMode, pairCount: pairCount, previewTime: previewTime };
     }
 
     function bindPairsSettings(els, prefs, listenOpts, handlers) {
@@ -32,6 +35,15 @@
                 if (count >= 3 && count <= 5) {
                     if (prefs) prefs.save('cognitivePairsPrefs', { pairCount: count });
                     if (handlers.onPairCountChange) handlers.onPairCountChange(count);
+                }
+            }, listenOpts);
+        }
+        if (els.contentModeSelect) {
+            els.contentModeSelect.addEventListener('change', function () {
+                const value = this.value;
+                if (value === 'food' || value === 'faces') {
+                    if (prefs) prefs.save('cognitivePairsPrefs', { contentMode: value });
+                    if (handlers.onContentModeChange) handlers.onContentModeChange(value);
                 }
             }, listenOpts);
         }
@@ -84,6 +96,14 @@
                 }
             }, listenOpts);
         }
+        if (els.pairsContentMode) {
+            els.pairsContentMode.addEventListener('change', function () {
+                const value = this.value;
+                if (value === 'food' || value === 'faces') {
+                    if (handlers.onContentModeChange) handlers.onContentModeChange(value);
+                }
+            }, listenOpts);
+        }
     }
 
 
@@ -104,6 +124,7 @@
                 },
                 footer: {
                     hint: '🃏 翻開兩張卡片，找出相同食物',
+                    hintId: 'pairsHint',
                     roundId: 'pairsRoundInfo',
                     roundText: '第 1 局'
                 }
@@ -114,6 +135,14 @@
                 title: '🃏 配對記憶',
                 hamburgerId: 'hamburgerBtnPairsSettings',
                 fields: [
+                    {
+                        id: 'pairsContentMode',
+                        label: '內容',
+                        options: [
+                            { value: 'food', label: '食物', selected: true },
+                            { value: 'faces', label: '相同表情' }
+                        ]
+                    },
                     {
                         id: 'pairsCountSelect',
                         label: '🔢 對數',

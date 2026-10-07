@@ -28,8 +28,13 @@
             noBtn: $('gngNoGoBtn'),
             backBtn: $('gngBackBtn'),
             settingsBackBtn: $('gngSettingsBackBtn'),
+            contentMode: $('gngContentMode'),
             goCategory: $('gngGoCategory'),
             noGoCategory: $('gngNoGoCategory'),
+            faceTargetExpression: $('gngFaceTargetExpression'),
+            goCategoryRow: $('gngGoCategoryRow'),
+            noGoCategoryRow: $('gngNoGoCategoryRow'),
+            faceTargetRow: $('gngFaceTargetRow'),
             autoToggle: $('gngAutoToggle'),
             switchType: $('gngSwitchType'),
             switchFreq: $('gngSwitchFreq'),
@@ -121,10 +126,19 @@
     }
 
     function applySettings(els, prefs) {
+        els.contentMode.value = prefs.contentMode;
         els.goCategory.value = prefs.goCategory;
         els.noGoCategory.value = prefs.noGoCategory;
+        els.faceTargetExpression.value = prefs.faceTargetExpression;
         els.switchType.value = prefs.switchType;
         els.switchFreq.value = String(prefs.switchFreq);
+    }
+
+    function syncContentRows(els, contentMode) {
+        const faceMode = contentMode === 'faces';
+        if (els.goCategoryRow) els.goCategoryRow.classList.toggle('hidden', faceMode);
+        if (els.noGoCategoryRow) els.noGoCategoryRow.classList.toggle('hidden', faceMode);
+        if (els.faceTargetRow) els.faceTargetRow.classList.toggle('hidden', !faceMode);
     }
     function bindGngControls(els, keyboard, listenOpts, handlers) {
         handlers = handlers || {};
@@ -205,6 +219,7 @@
         showIntro: showIntro,
         syncAutoToggle: syncAutoToggle,
         applySettings: applySettings,
+        syncContentRows: syncContentRows,
         bindGngControls: bindGngControls
     };
 

@@ -6,12 +6,13 @@
         const doc = (root && root.ownerDocument) || root || (typeof document !== 'undefined' ? document : null);
         if (!doc) return null;
         const foodData = deps.foodData || (typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null);
+        const faceContent = deps.faceContent || (typeof global.CognitiveFaceGameContent !== 'undefined' ? global.CognitiveFaceGameContent : null);
         const logic = deps.logic || (typeof global.CognitivePairsLogic !== 'undefined' ? global.CognitivePairsLogic : null);
         const view = deps.view || (typeof global.CognitivePairsView !== 'undefined' ? global.CognitivePairsView : null);
         const settings = deps.settings || (typeof global.CognitivePairsSettings !== 'undefined' ? global.CognitivePairsSettings : null);
         const gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
         const feedback = deps.feedback || (typeof global.CognitiveFeedback !== 'undefined' ? global.CognitiveFeedback : null);
-        if (!foodData || !logic || !view || !settings || !gameScreen || !feedback) return null;
+        if (!foodData || !faceContent || !logic || !view || !settings || !gameScreen || !feedback) return null;
         const router = deps.router || (typeof global.CognitiveRouter !== 'undefined' ? global.CognitiveRouter : null);
         const prefs = deps.prefs || (typeof global.CognitivePrefs !== 'undefined' ? global.CognitivePrefs : null);
         const message = deps.message || (typeof global.CognitiveMessage !== 'undefined' ? global.CognitiveMessage : null);
@@ -32,6 +33,7 @@
         els.roundInfo = els.pairsRoundInfo;
         els.backBtn = els.pairsBackBtn;
         els.settingsBackBtn = els.pairsSettingsBackBtn;
+        els.contentModeSelect = els.pairsContentMode;
         els.pairCountSelect = els.pairsCountSelect;
         els.previewTimeSelect = els.pairsPreviewTimeSelect;
         els.startBtn = els.pairsStartBtn;
@@ -40,10 +42,12 @@
             !els.pairsCountSelect || !els.pairsPreviewTimeSelect || !els.pairsStartBtn) return null;
 
         const preferences = settings.loadPairsPreferences(prefs);
+        if (els.pairsContentMode) els.pairsContentMode.value = preferences.contentMode;
         if (els.pairsCountSelect) els.pairsCountSelect.value = String(preferences.pairCount);
         if (els.pairsPreviewTimeSelect) els.pairsPreviewTimeSelect.value = preferences.previewTime;
 
         const state = {
+            contentMode: preferences.contentMode,
             pairCount: preferences.pairCount,
             previewTime: preferences.previewTime,
             score: 0,
@@ -170,12 +174,18 @@
             state.isPreviewing = false;
             els.pairsGridContainer.classList.remove('is-preview');
             feedback.clear(els.pairsGridWrapper);
-            const round = logic.buildMemoryPairsRound(
-                state.pairCount,
-                foodData.FOOD_DATA,
-                foodData.shuffle,
-                foodData.getFoodId
-            );
+            const round = state.contentMode === 'faces'
+                ? logic.buildExpressionPairsRound(
+                    state.pairCount,
+                    faceContent.listItems({ dimension: 'expression' }),
+                    foodData.shuffle
+                )
+                : logic.buildMemoryPairsRound(
+                    state.pairCount,
+                    foodData.FOOD_DATA,
+                    foodData.shuffle,
+                    foodData.getFoodId
+                );
             state.cards = round.cards;
             state.flippedIndexes = [];
             state.matchedPairs = 0;
@@ -221,6 +231,11 @@
         function prepare() {
             pause();
             reset();
+            if (els.pairsHint) {
+                els.pairsHint.textContent = state.contentMode === 'faces'
+                    ? '🃏 翻開兩張卡片，找出相同表情'
+                    : '🃏 翻開兩張卡片，找出相同食物';
+            }
             generateRound();
             startPreview();
             if (syncTopBarCentering) syncTopBarCentering();
@@ -246,7 +261,11 @@
                 }
             },
             onPairCountChange: function (count) { state.pairCount = count; },
-            onPreviewTimeChange: function (value) { state.previewTime = value; }
+            onPreviewTimeChange: function (value) { state.previewTime = value; },
+            onContentModeChange: function (value) {
+                state.contentMode = value;
+                if (prefs) prefs.save('cognitivePairsPrefs', { contentMode: value });
+            }
         });
 
         updateHud();
@@ -281,6 +300,7 @@
             setup: function () {
                 return api.mount(document, {
                     foodData: window.CognitiveFoodData,
+                    faceContent: window.CognitiveFaceGameContent,
                     logic: window.CognitivePairsLogic,
                     view: window.CognitivePairsView,
                     settings: window.CognitivePairsSettings,

@@ -28,7 +28,10 @@
         if (!foodData) return null;
         var FOOD_DATA = foodData.FOOD_DATA;
 
+        var faceContent = deps.faceContent || (typeof global.CognitiveFaceGameContent !== 'undefined' ? global.CognitiveFaceGameContent : null);
+        var faceNbackLogic = deps.faceNbackLogic || (typeof global.CognitiveFaceNbackLogic !== 'undefined' ? global.CognitiveFaceNbackLogic : null);
         var sequence = deps.sequence || (typeof global.CognitiveSequence !== 'undefined' ? global.CognitiveSequence : null);
+        var prefs = deps.prefs || (typeof global.CognitivePrefs !== 'undefined' ? global.CognitivePrefs : null);
         var activityFactory = deps.activity || (typeof global.CognitiveActivity !== 'undefined' ? global.CognitiveActivity : null);
         var message = deps.message || (typeof global.CognitiveMessage !== 'undefined' ? global.CognitiveMessage : null);
         var feedback = deps.feedback || (typeof global.CognitiveFeedback !== 'undefined' ? global.CognitiveFeedback : null);
@@ -40,7 +43,7 @@
         var gameScreen = deps.gameScreen || (typeof global.CognitiveGameScreen !== 'undefined' ? global.CognitiveGameScreen : null);
         var nbackScreen = deps.nbackScreen || (typeof global.CognitiveNbackScreen !== 'undefined' ? global.CognitiveNbackScreen : null);
 
-        if (!sequence || !activityFactory || !view) return null;
+        if (!sequence || !faceContent || !faceNbackLogic || !activityFactory || !view) return null;
 
         // Static markup (older cached page) stays usable until the generated
         // tree is available; without either, the game must not half-mount.
@@ -61,6 +64,7 @@
         var els = view.createNbackEls(doc);
 
         var state = {
+            contentMode: 'food',
             n: 1,
             speed: 5,
             isPlaying: false,
@@ -74,6 +78,11 @@
             currentItem: null,
             matchPending: false
         };
+
+        var nbackPrefs = prefs ? prefs.load('cognitiveNbackPrefs') : null;
+        if (nbackPrefs && ['food', 'faceIdentity', 'faceExpression'].indexOf(nbackPrefs.contentMode) !== -1) {
+            state.contentMode = nbackPrefs.contentMode;
+        }
 
         var controller = new AbortController();
         var listenOpts = { signal: controller.signal };
@@ -91,6 +100,16 @@
         var nbackView = view.createNbackView(doc, els, nbackActivity, 240);
 
         function buildSequence(length, seedValues) {
+            if (state.contentMode !== 'food') {
+                return faceNbackLogic.buildFaceNbackSequence({
+                    dimension: state.contentMode === 'faceIdentity' ? 'identity' : 'expression',
+                    n: state.n,
+                    length: length,
+                    faces: faceContent.listItems({ dimension: 'expression' }),
+                    matchProbability: sequence.matchProbability,
+                    seedValues: seedValues || []
+                });
+            }
             return sequence.generateTrials({
                 choices: FOOD_DATA,
                 n: state.n,
@@ -223,7 +242,18 @@
             const wasPlaying = state.isPlaying;
             state.n = newN;
             if (wasPlaying) pauseNback();
-            nbackView.showInstruction(message, state.n);
+            nbackView.showInstruction(message, state.n, state.contentMode);
+        }
+
+        function changeNbackContentMode(value) {
+            if (['food', 'faceIdentity', 'faceExpression'].indexOf(value) === -1) return;
+            pauseNback();
+            state.contentMode = value;
+            state.sequence = [];
+            state.currentIndex = -1;
+            state.currentItem = null;
+            if (prefs) prefs.save('cognitiveNbackPrefs', { contentMode: value });
+            nbackView.showInstruction(message, state.n, state.contentMode);
         }
 
         function destroyNback() {
@@ -245,6 +275,7 @@
             onSpeedDown: function () { changeNbackSpeed(-1); },
             onSpeedUp: function () { changeNbackSpeed(1); },
             onNChange: function (value) { changeNbackN(parseInt(value, 10)); },
+            onContentModeChange: changeNbackContentMode,
             onBack: function () {
                 if (router) {
                     router.goBack();
@@ -266,6 +297,7 @@
 
         els.speedDisplay.textContent = state.speed;
         els.nSelect.value = state.n;
+        if (els.contentModeSelect) els.contentModeSelect.value = state.contentMode;
 
         function prepareNbackGame() {
             pauseNback();
@@ -282,7 +314,7 @@
                 nbackView.setScore(state.score);
             }
             els.speedDisplay.textContent = state.speed;
-            nbackView.showInstruction(message, state.n);
+            nbackView.showInstruction(message, state.n, state.contentMode);
         }
 
         if (router) {
@@ -316,7 +348,10 @@
         // Later strangler steps move this call into the router/orchestrator.
         api.mount(document, {
             foodData: window.CognitiveFoodData,
+            faceContent: window.CognitiveFaceGameContent,
+            faceNbackLogic: window.CognitiveFaceNbackLogic,
             sequence: window.CognitiveSequence,
+            prefs: window.CognitivePrefs,
             activity: window.CognitiveActivity,
             message: window.CognitiveMessage,
             feedback: window.CognitiveFeedback,

@@ -26,7 +26,25 @@
         ['海鮮', '海鮮']
     ].map(function (pair) { return option(pair[0], pair[1]); });
 
+    function getFaceExpressionOptions() {
+        var faceContent = typeof window !== 'undefined' ? window.CognitiveFaceGameContent : null;
+        if (faceContent && typeof faceContent.expressionOptions === 'function') {
+            return faceContent.expressionOptions().map(function (item) {
+                return option(item.value, item.label);
+            });
+        }
+        return [
+            option('neutral', '無表情'),
+            option('happy', '開心'),
+            option('sad', '傷心'),
+            option('angry', '生氣'),
+            option('fear', '驚慌'),
+            option('disgust', '厭惡')
+        ];
+    }
+
     function createGngScreenDefinition() {
+        var faceExpressionOptions = getFaceExpressionOptions();
         return {
             game: {
                 topBar: {
@@ -94,8 +112,17 @@
                 saveButton: { id: 'gngSaveSettingsBtn', label: '💾儲存', title: '儲存設定' },
                 hamburgerId: 'hamburgerBtnGngSettings',
                 fields: [
-                    { id: 'gngGoCategory', label: '✅ Go 類別', options: CATEGORY_OPTIONS },
-                    { id: 'gngNoGoCategory', label: '❌ No Go 類別', options: CATEGORY_OPTIONS },
+                    {
+                        id: 'gngContentMode',
+                        label: '內容',
+                        options: [
+                            option('food', '食物', true),
+                            option('faces', '名人表情')
+                        ]
+                    },
+                    { id: 'gngGoCategory', rowId: 'gngGoCategoryRow', label: '✅ Go 類別', options: CATEGORY_OPTIONS },
+                    { id: 'gngNoGoCategory', rowId: 'gngNoGoCategoryRow', label: '❌ No Go 類別', options: CATEGORY_OPTIONS },
+                    { id: 'gngFaceTargetExpression', rowId: 'gngFaceTargetRow', label: '目標表情', options: faceExpressionOptions },
                     { separator: true },
                     { label: '🔄 自動切換', button: { id: 'gngAutoToggle', text: '關閉' } },
                     field('gngSwitchType', '切換類型', ['random', 'swap'], ['隨機變更兩者', '互換'], 1),

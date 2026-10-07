@@ -20,6 +20,8 @@ test('module exposes the seam: mount + pure-logic module + data tables', functio
     assert.equal(typeof logic.cloneDualModalityValue, 'function');
     assert.equal(typeof logic.getDualFoodId, 'function');
     assert.equal(logic.DUAL_MODALITY_LABELS.image, '圖片');
+    assert.equal(logic.DUAL_MODALITY_LABELS.identity, '身份');
+    assert.equal(logic.DUAL_MODALITY_LABELS.expression, '表情');
     assert.equal(logic.DUAL_POSITION_GRIDS['3x3'].cols, 3);
     assert.equal(logic.DUAL_COLOR_PALETTES['6'].length, 6);
     assert.equal(logic.DUAL_NBACK_SEQUENCE_LENGTH, 50);
@@ -36,6 +38,8 @@ test('getDualFoodId / getDualModalityValue / cloneDualModalityValue semantics', 
     assert.equal(logic.getDualFoodId({ id: 'x', name: 'n' }), 'x');
     assert.equal(logic.getDualFoodId({ name: 'n' }), 'n');
     assert.equal(logic.getDualModalityValue('image', { id: 'i', name: 'n' }), 'i');
+    assert.equal(logic.getDualModalityValue('identity', { personId: 'anita-mui' }), 'anita-mui');
+    assert.equal(logic.getDualModalityValue('expression', { expressionKey: 'happy' }), 'happy');
     assert.equal(logic.getDualModalityValue('audio', { name: 'n' }), 'n');
     assert.equal(logic.getDualModalityValue('color', { name: '紅色', css: '#fff' }), '紅色');
     assert.equal(logic.getDualModalityValue('position', 5), 5);
@@ -47,6 +51,8 @@ test('getDualFoodId / getDualModalityValue / cloneDualModalityValue semantics', 
 test('getDualModalityChoices returns the right choice set per modality', function () {
     const args = ['3x3', '6', FOOD_DATA, GRIDS, PALETTES];
     assert.equal(logic.getDualModalityChoices('image', ...args), FOOD_DATA);
+    assert.equal(logic.getDualModalityChoices('identity', ...args), FOOD_DATA);
+    assert.equal(logic.getDualModalityChoices('expression', ...args), FOOD_DATA);
     assert.equal(logic.getDualModalityChoices('audio', ...args), FOOD_DATA);
     assert.deepEqual(logic.getDualModalityChoices('position', ...args), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
     assert.deepEqual(logic.getDualModalityChoices('position', '2x2', '6', FOOD_DATA, GRIDS, PALETTES), [0, 1, 2, 3]);

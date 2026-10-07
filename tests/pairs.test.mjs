@@ -8,6 +8,8 @@ const pairsLogic = require('../js/food/pairs-logic.js');
 const pairsView = require('../js/food/pairs-view.js');
 const pairs = require('../js/food/pairs.js');
 const foodData = require('../js/food/food-data.js');
+const faceSet = require('../js/celebrity-faces.js');
+const { createFaceGameContent } = require('../js/face-game-content.js');
 
 function shuffle(values) {
     return [...values];
@@ -93,5 +95,28 @@ test('view renders the requested pair grid', function () {
     assert.equal(container.children.length, 8);
     assert.equal(container.children[0].className, 'dual-grid-cell memory-card');
     assert.ok(container.children[0].dataset.pairId);
+});
+
+test('expression pairs use two different people with the same expression', function () {
+    const faceContent = createFaceGameContent({ faceSet: faceSet });
+    const round = pairsLogic.buildExpressionPairsRound(
+        4,
+        faceContent.listItems({ dimension: 'expression' }),
+        shuffle
+    );
+    assert.equal(round.cards.length, 8);
+    const byPair = {};
+    round.cards.forEach(function (card) {
+        if (!byPair[card.pairId]) byPair[card.pairId] = [];
+        byPair[card.pairId].push(card);
+    });
+    assert.equal(Object.keys(byPair).length, 4);
+    Object.keys(byPair).forEach(function (pairId) {
+        assert.equal(byPair[pairId].length, 2);
+        assert.notEqual(byPair[pairId][0].personId, byPair[pairId][1].personId);
+        byPair[pairId].forEach(function (card) {
+            assert.equal(card.category, pairId);
+        });
+    });
 });
 

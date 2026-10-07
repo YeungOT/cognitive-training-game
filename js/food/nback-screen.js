@@ -21,6 +21,15 @@
                             option('3', 'N=3')
                         ]
                     },
+                    dropdowns: [{
+                        selectId: 'nbackContentModeSelect',
+                        ariaLabel: '內容',
+                        options: [
+                            option('food', '食物', true),
+                            option('faceIdentity', '面孔・身份'),
+                            option('faceExpression', '面孔・表情')
+                        ]
+                    }],
                     hamburgerId: 'hamburgerBtnNback'
                 },
                 stage: {

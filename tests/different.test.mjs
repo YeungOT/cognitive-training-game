@@ -5,6 +5,8 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const different = require('../js/food/different.js');
 const foodData = require('../js/food/food-data.js');
+const faceSet = require('../js/celebrity-faces.js');
+const { createFaceGameContent } = require('../js/face-game-content.js');
 
 const FOOD_DATA = foodData.FOOD_DATA;
 const CATEGORY_NAMES = foodData.CATEGORY_NAMES;
@@ -49,4 +51,22 @@ test('buildDifferentRound odd category differs from the shared common category',
     const commonCats = new Set(r.items.filter(function (i) { return !i.isCorrect; }).map(function (i) { return i.category; }));
     assert.equal(commonCats.size, 1);
     assert.notEqual([...commonCats][0], r.oddItem.category);
+});
+
+test('buildExpressionDifferentRound uses distinct people and one odd expression', function () {
+    const faceContent = createFaceGameContent({ faceSet: faceSet });
+    [3, 4, 5, 6].forEach(function (count) {
+        const r = different.buildExpressionDifferentRound(
+            count,
+            faceContent.listItems({ dimension: 'expression' }),
+            shuffle,
+            pickRandom
+        );
+        assert.equal(r.items.length, count);
+        assert.equal(r.items.filter(function (item) { return item.isCorrect; }).length, 1);
+        assert.equal(new Set(r.items.map(function (item) { return item.personId; })).size, count);
+        const common = r.items.filter(function (item) { return !item.isCorrect; }).map(function (item) { return item.expressionKey; });
+        assert.equal(new Set(common).size, 1);
+        assert.notEqual(common[0], r.oddItem.expressionKey);
+    });
 });

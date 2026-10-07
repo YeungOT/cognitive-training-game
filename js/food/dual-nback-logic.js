@@ -12,6 +12,8 @@
 
     var DUAL_MODALITY_LABELS = {
         image: '圖片',
+        identity: '身份',
+        expression: '表情',
         position: '位置',
         color: '顏色',
         audio: '聲音'
@@ -47,19 +49,25 @@
 
     function getDualModalityValue(modality, value) {
         if (modality === 'image') return value.image || getDualFoodId(value);
+        if (modality === 'identity') return value.personId;
+        if (modality === 'expression') return value.expressionKey;
         if (modality === 'audio') return getDualFoodId(value);
         if (modality === 'color') return value.name;
         return value;
     }
 
     function cloneDualModalityValue(modality, value) {
-        if (modality === 'image' || modality === 'audio') return value ? { ...value } : value;
+        if (modality === 'image' || modality === 'audio' ||
+            modality === 'identity' || modality === 'expression') {
+            return value ? { ...value } : value;
+        }
         if (modality === 'color') return value ? { ...value } : value;
         return value;
     }
 
     function getDualModalityChoices(modality, positionGrid, colorPalette, foodData, positionGrids, colorPalettes) {
-        if (modality === 'image' || modality === 'audio') return foodData;
+        if (modality === 'image' || modality === 'audio' ||
+            modality === 'identity' || modality === 'expression') return foodData;
         if (modality === 'position') {
             var grid = positionGrids[positionGrid] || positionGrids['3x3'];
             return Array.from({ length: grid.cols * grid.rows }, function (_, index) { return index; });

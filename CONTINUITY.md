@@ -2,9 +2,9 @@
 
 ## Snapshot — ≤ 25 lines
 - Goal: add an emotional face–word Stroop game to cognitive-training-pwa using the repaired celebrity expression Face Set.
-- Now: simplified single face-target Stroop is implemented, and completion/result dialogs now require a button action while normal messages keep backdrop/Esc dismissal.
-- Next: review and commit the completion-dialog fix; then continue real-device care-home verification of the Stroop game.
-- Open questions: none for the modal-lock change; deferred Stroop assessment/identity/summary work is unchanged. Standing: iPadOS on-device safe-area values UNCONFIRMED.
+- Now: all six celebrity expressions ship, and GNG, Pairs, Find the Different One, single N-back, and dual N-back have working celebrity-face modes.
+- Next: user browser-verification of the new face modes on a care-home device, then commit/push if desired.
+- Open questions: none for the implemented face modes. Deferred: broader face-recognition games and the Stroop assessment/summary work. Standing: iPadOS on-device safe-area values UNCONFIRMED.
 
 ## Done (recent)
 - 2026-08-21T16:52:30+08:00 [CODE] Fix rotating icon direction: portraitLockTurn 0 → -360deg (anticlockwise) in both games' css/unified.css; sw.js regenerated; pushed both repos (colour 87e40bc, cognitive 61caa8b). Icon is ⟲ (anticlockwise arrow) but previously spun clockwise.
@@ -727,3 +727,15 @@
 - [CODE] Added unit coverage for normal backdrop dismissal, blocked backdrop/request dismissal, button-only close and programmatic close; added view-level assertions for all four completion call sites; added a browser regression check plus Shopping completion integration assertion.
 - [TOOL] Verification: `npm test` 180/180; `verify:games` PASS including the button-only modal check; `verify:parity` PASS; `verify:layout` PASS; `verify:boot` PASS; `verify:edge` PASS; `verify:back` PASS; `verify:offline` PASS with 464 assets (218 offline images checked, 0 failures); `sw.js` regenerated; `node --check` and `git diff --check` clean (line-ending warnings only).
 - [CODE] UNCOMMITTED: the modal-lock implementation, tests, ledger and regenerated `sw.js`.
+
+### Celebrity face modes across existing games (2026-10-07)
+- [USER] Approved four face-based variants: GNG target expression, Pairs same-expression matching, Find the Different expression, and single/dual N-back by identity and expression category. Neutral is included as a sixth category.
+- [CODE] Shipped all 60 face images and changed `SHIPPED_EXPRESSION_KEYS` to all six expressions. Added `js/face-game-content.js` as the shared game-facing projection over the game-agnostic Face Set.
+- [CODE] GNG: added `gngContentMode` and `gngFaceTargetExpression`; face mode uses the selected expression as Go and all other expressions as No-Go. Food remains the default.
+- [CODE] Pairs: added `pairsContentMode`; face mode selects two different people with the same expression, including `無表情`, and changes the hint to `相同表情`.
+- [CODE] Find the Different One: added a top-bar content selector; face mode chooses distinct people and exactly one different expression, including `無表情`.
+- [CODE] N-back: added `nbackContentModeSelect` with `食物`, `面孔・身份`, and `面孔・表情`; `js/face-nback-logic.js` constructs deliberate identity/category matches rather than repeating an exact image blindly.
+- [CODE] Dual N-back: added `身份` and `表情` modalities. The face pair uses one synchronized face sequence with independent identity and expression match flags and two match buttons.
+- [TOOL] Verification: `npm test` 192/192; full `npm run verify` PASS including parity, layout, boot, edge, back, games and offline. Offline cache: 506 assets, 420 stable media, 258 offline images checked, 0 failures. `sw.js` regenerated.
+- [ASSUMPTION] Existing files `gng.js`, `different.js`, `nback.js`, `dual-nback.js` and `pairs.js` remain above the repository's 300-line guideline; this feature added to those pre-existing shapes rather than performing an unrelated split refactor.
+- [CODE] UNCOMMITTED: all face-mode implementation, tests, ledger and regenerated `sw.js`, on top of commits `112dabf` and `9a94e83`.

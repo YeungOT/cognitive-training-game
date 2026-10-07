@@ -38,13 +38,73 @@
         return { items: items, oddItem: items[0] };
     }
 
+    function buildExpressionDifferentRound(imageCount, items, shuffle, pickRandom, random) {
+        var count = imageCount;
+        if (!Number.isInteger(count) || count < 3 || count > 6) {
+            throw new Error('imageCount must be an integer between 3 and 6');
+        }
+        if (!Array.isArray(items) || items.length < count) {
+            throw new Error('items must contain at least imageCount entries');
+        }
+        if (typeof shuffle !== 'function' || typeof pickRandom !== 'function') {
+            throw new Error('shuffle and pickRandom must be functions');
+        }
+
+        var groups = {};
+        items.forEach(function (item) {
+            if (!item || !item.expressionKey || !item.personId || !item.image) {
+                throw new Error('Each face item requires expressionKey, personId and image');
+            }
+            if (!groups[item.expressionKey]) groups[item.expressionKey] = [];
+            groups[item.expressionKey].push(item);
+        });
+
+        var expressionKeys = Object.keys(groups);
+        if (expressionKeys.length < 2) {
+            throw new Error('At least two expression groups are required');
+        }
+
+        var commonExpression = pickRandom(expressionKeys);
+        var oddCandidates = expressionKeys.filter(function (key) { return key !== commonExpression; });
+        var oddExpression = pickRandom(oddCandidates);
+        var commonPool = shuffle(groups[commonExpression], random);
+        var oddPool = shuffle(groups[oddExpression], random);
+        var usedPersonIds = new Set();
+        var commonItems = [];
+
+        for (var i = 0; i < commonPool.length && commonItems.length < count - 1; i++) {
+            var candidate = commonPool[i];
+            if (usedPersonIds.has(candidate.personId)) continue;
+            usedPersonIds.add(candidate.personId);
+            commonItems.push(candidate);
+        }
+        if (commonItems.length !== count - 1) {
+            throw new Error('Not enough distinct people for the requested common expression');
+        }
+
+        var oddItem = oddPool.filter(function (item) {
+            return !usedPersonIds.has(item.personId);
+        })[0];
+        if (!oddItem) {
+            throw new Error('Not enough distinct people for the requested odd expression');
+        }
+
+        var result = shuffle(
+            commonItems.map(function (item) { return Object.assign({}, item, { isCorrect: false }); })
+                .concat([Object.assign({}, oddItem, { isCorrect: true })]),
+            random
+        );
+        return { items: result, oddItem: oddItem };
+    }
+
     function mount(root, deps) {
         deps = deps || {};
         const doc = (root && root.ownerDocument) || root || (typeof document !== 'undefined' ? document : null);
         if (!doc) return null;
 
         const foodData = deps.foodData || (typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null);
-        if (!foodData) return null;
+        const faceContent = deps.faceContent || (typeof global.CognitiveFaceGameContent !== 'undefined' ? global.CognitiveFaceGameContent : null);
+        if (!foodData || !faceContent) return null;
         const FOOD_DATA = foodData.FOOD_DATA;
         const CATEGORY_NAMES = foodData.CATEGORY_NAMES;
         const shuffle = foodData.shuffle;
@@ -79,6 +139,14 @@
                             { value: '5', label: '5' }
                         ]
                     },
+                    dropdowns: [{
+                        selectId: 'differentContentMode',
+                        ariaLabel: '內容',
+                        options: [
+                            { value: 'food', label: '食物', selected: true },
+                            { value: 'face', label: '表情' }
+                        ]
+                    }],
                     hamburgerId: 'hamburgerBtnDifferent'
                 },
                 stage: {
@@ -91,6 +159,7 @@
                 },
                 footer: {
                     hint: '🔍 找出與其他食物不同的一張',
+                    hintId: 'differentHint',
                     roundId: 'differentRoundInfo',
                     roundText: '第 1 題'
                 }
@@ -103,6 +172,7 @@
             !els.differentCountSelect) return null;
 
         const state = {
+            contentMode: 'food',
             imageCount: 4,
             score: 0,
             round: 1,
@@ -116,7 +186,9 @@
 
         const differentPreferences = prefs ? prefs.load('cognitiveDifferentPrefs') : null;
         if (differentPreferences) {
+            state.contentMode = differentPreferences.contentMode === 'face' ? 'face' : 'food';
             state.imageCount = differentPreferences.imageCount;
+            if (els.differentContentMode) els.differentContentMode.value = state.contentMode;
             els.differentCountSelect.value = String(state.imageCount);
         }
 
@@ -167,9 +239,21 @@
         }
 
         function generateDifferentRound() {
-            const result = buildDifferentRound(state.imageCount, FOOD_DATA, CATEGORY_NAMES, shuffle, pickRandom);
+            const result = state.contentMode === 'face'
+                ? buildExpressionDifferentRound(
+                    state.imageCount,
+                    faceContent.listItems({ dimension: 'expression' }),
+                    shuffle,
+                    pickRandom
+                )
+                : buildDifferentRound(state.imageCount, FOOD_DATA, CATEGORY_NAMES, shuffle, pickRandom);
             state.oddItem = result.oddItem;
             state.items = result.items;
+            if (els.differentHint) {
+                els.differentHint.textContent = state.contentMode === 'face'
+                    ? '🔍 找出與其他表情不同的一張'
+                    : '🔍 找出與其他食物不同的一張';
+            }
             view.renderDifferentGrid(doc, els.differentGridContainer, state.items, {
                 onCardClick: handleDifferentCardClick,
                 onMagnify: openMagnify
@@ -208,7 +292,9 @@
             updateDifferentScore();
             generateDifferentRound();
             message.show({
-                title: '找出與其他食物不同的一張',
+                title: state.contentMode === 'face'
+                    ? '找出與其他表情不同的一張'
+                    : '找出與其他食物不同的一張',
                 subtitle: '',
                 extraLarge: true,
                 pauseTimer: false
@@ -241,6 +327,17 @@
                 generateDifferentRound();
             }
         }, listenOpts);
+        if (els.differentContentMode) {
+            els.differentContentMode.addEventListener('change', function () {
+                const value = this.value === 'face' ? 'face' : 'food';
+                state.contentMode = value;
+                if (prefs) prefs.save('cognitiveDifferentPrefs', {
+                    contentMode: value,
+                    imageCount: state.imageCount
+                });
+                generateDifferentRound();
+            }, listenOpts);
+        }
 
         updateDifferentScore();
         updateDifferentRound();
@@ -263,7 +360,8 @@
 
     var api = {
         mount: mount,
-        buildDifferentRound: buildDifferentRound
+        buildDifferentRound: buildDifferentRound,
+        buildExpressionDifferentRound: buildExpressionDifferentRound
     };
 
     if (typeof module !== 'undefined' && module.exports) {
@@ -282,6 +380,7 @@
             setup: function () {
                 return api.mount(document, {
                     foodData: window.CognitiveFoodData,
+                    faceContent: window.CognitiveFaceGameContent,
                     prefs: window.CognitivePrefs,
                     message: window.CognitiveMessage,
                     feedback: window.CognitiveFeedback,

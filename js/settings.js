@@ -6,6 +6,7 @@
         music: 'cognitiveAppMusic',
         sfx: 'cognitiveAppSfx',
         gng: 'cognitiveGngPrefs',
+        nback: 'cognitiveNbackPrefs',
         different: 'cognitiveDifferentPrefs',
         pairs: 'cognitivePairsPrefs',
         shopping: 'cognitiveShoppingPrefs',
@@ -55,6 +56,8 @@
         cognitiveGngPrefs: {
             format: 'json',
             default: {
+                contentMode: 'food',
+                faceTargetExpression: 'happy',
                 goCategory: '水果',
                 noGoCategory: '全部',
                 autoSwitch: false,
@@ -62,6 +65,13 @@
                 switchFreq: 10
             },
             fields: {
+                contentMode: { type: 'string', enum: ['food', 'faces'] },
+                faceTargetExpression: {
+                    type: 'string',
+                    enum: function () {
+                        return getFaceExpressionOptions();
+                    }
+                },
                 goCategory: {
                     type: 'string',
                     enum: function () {
@@ -79,17 +89,26 @@
                 switchFreq: { type: 'number', enum: [5, 10, 15, 20] }
             }
         },
+        cognitiveNbackPrefs: {
+            format: 'json',
+            default: { contentMode: 'food' },
+            fields: {
+                contentMode: { type: 'string', enum: ['food', 'faceIdentity', 'faceExpression'] }
+            }
+        },
         cognitiveDifferentPrefs: {
             format: 'json',
-            default: { imageCount: 4 },
+            default: { contentMode: 'food', imageCount: 4 },
             fields: {
+                contentMode: { type: 'string', enum: ['food', 'face'] },
                 imageCount: { type: 'number', enum: [3, 4, 5, 6] }
             }
         },
         cognitivePairsPrefs: {
             format: 'json',
-            default: { pairCount: 4, previewTime: 'manual' },
+            default: { contentMode: 'food', pairCount: 4, previewTime: 'manual' },
             fields: {
+                contentMode: { type: 'string', enum: ['food', 'faces'] },
                 pairCount: { type: 'number', enum: [3, 4, 5] },
                 previewTime: { type: 'string', enum: ['5', '10', '15', '20', 'manual'] }
             }
@@ -159,6 +178,16 @@
         var foodData = typeof global.CognitiveFoodData !== 'undefined' ? global.CognitiveFoodData : null;
         var names = foodData ? foodData.CATEGORY_NAMES : [];
         return ['全部'].concat(names);
+    }
+
+    function getFaceExpressionOptions() {
+        var faceContent = typeof global.CognitiveFaceGameContent !== 'undefined'
+            ? global.CognitiveFaceGameContent
+            : null;
+        if (faceContent && typeof faceContent.expressionOptions === 'function') {
+            return faceContent.expressionOptions().map(function (option) { return option.value; });
+        }
+        return ['neutral', 'happy', 'sad', 'angry', 'fear', 'disgust'];
     }
 
     function clone(value) {

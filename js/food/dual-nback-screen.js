@@ -12,6 +12,8 @@
     var MODALITY_OPTIONS = [
         option('', '請選擇'),
         option('image', '圖片'),
+        option('identity', '身份'),
+        option('expression', '表情'),
         option('position', '位置'),
         option('color', '顏色'),
         option('audio', '聲音')

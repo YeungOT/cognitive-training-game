@@ -30,6 +30,7 @@
             notMatchBtn: $('nbackNotMatchBtn'),
             imageContainer: $('nbackImageContainer'),
             nSelect: $('nbackNSelect'),
+            contentModeSelect: $('nbackContentModeSelect'),
             backBtn: $('nbackBackBtn'),
             magnifyBtn: $('nbackMagnifyBtn'),
             game: $('nbackGame')
@@ -122,9 +123,15 @@
             feedback.show(els.gridWrapper, text, kind);
         }
 
-        function showInstruction(message, n) {
+        function showInstruction(message, n, mode) {
+            var title = `看看圖片與上 ${n} 張是否相同`;
+            if (mode === 'faceIdentity') {
+                title = `看看是否與上 ${n} 張為同一個人`;
+            } else if (mode === 'faceExpression') {
+                title = `看看表情是否與上 ${n} 張相同`;
+            }
             message.show({
-                title: `看看圖片與上 ${n} 張是否相同`,
+                title: title,
                 subtitle: '',
                 extraLarge: true,
                 pauseTimer: false
@@ -182,6 +189,11 @@
             if (els.nSelect) {
                 els.nSelect.addEventListener('change', function () {
                     if (handlers.onNChange) handlers.onNChange(els.nSelect.value);
+                }, listenOpts);
+            }
+            if (els.contentModeSelect) {
+                els.contentModeSelect.addEventListener('change', function () {
+                    if (handlers.onContentModeChange) handlers.onContentModeChange(els.contentModeSelect.value);
                 }, listenOpts);
             }
             if (els.backBtn) {

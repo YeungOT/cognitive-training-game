@@ -53,9 +53,10 @@
         opts = opts || {};
         const gridInfo = opts.positionGrids[opts.positionGrid] || opts.positionGrids['3x3'];
         const hasImage = opts.modalities.indexOf('image') !== -1;
+        const hasFace = opts.modalities.indexOf('identity') !== -1 || opts.modalities.indexOf('expression') !== -1;
         const hasColor = opts.modalities.indexOf('color') !== -1;
         const position = opts.currentItems.position || 0;
-        const imageItem = opts.currentItems.image;
+        const imageItem = opts.currentItems.image || opts.currentItems.identity || opts.currentItems.expression;
         const colorItem = opts.currentItems.color;
 
         els.grid.className = `dual-grid dual-grid-${opts.positionGrid}`;
@@ -66,7 +67,7 @@
         for (let i = 0; i < gridInfo.cols * gridInfo.rows; i++) {
             const cell = doc.createElement('div');
             cell.className = 'dual-grid-cell' + (i === position ? ' active' : '');
-            if (i === position && hasImage && imageItem) {
+            if (i === position && (hasImage || hasFace) && imageItem) {
                 const img = doc.createElement('img');
                 img.src = imageItem.image;
                 img.alt = imageItem.name;
@@ -85,13 +86,14 @@
     function renderDualCard(doc, els, opts) {
         opts = opts || {};
         const hasImage = opts.modalities.indexOf('image') !== -1;
+        const hasFace = opts.modalities.indexOf('identity') !== -1 || opts.modalities.indexOf('expression') !== -1;
         const hasColor = opts.modalities.indexOf('color') !== -1;
-        const imageItem = opts.currentItems.image;
+        const imageItem = opts.currentItems.image || opts.currentItems.identity || opts.currentItems.expression;
         const colorItem = opts.currentItems.color;
 
         els.card.classList.toggle('color-card', hasColor);
         els.card.style.background = hasColor && colorItem ? colorItem.css : '';
-        if (hasImage && imageItem) {
+        if ((hasImage || hasFace) && imageItem) {
             els.image.style.display = 'block';
             els.image.src = imageItem.image;
             els.image.alt = imageItem.name;
@@ -142,6 +144,13 @@
         const modality2 = els.modality2Select.value;
         const needsPosition = modality1 === 'position' || modality2 === 'position';
         const needsColor = modality1 === 'color' || modality2 === 'color';
+        const hasIdentity = modality1 === 'identity' || modality2 === 'identity';
+        const hasExpression = modality1 === 'expression' || modality2 === 'expression';
+        const hasAudio = modality1 === 'audio' || modality2 === 'audio';
+        const facePair = hasIdentity || hasExpression;
+        const validFacePair = !facePair || (
+            hasIdentity && hasExpression && !needsPosition && !needsColor && !hasAudio
+        );
 
         els.positionSettings.classList.toggle('hidden', !needsPosition);
         els.colorSettings.classList.toggle('hidden', !needsColor);
@@ -150,6 +159,7 @@
         if (needsColor && !els.colorPaletteSelect.value) els.colorPaletteSelect.value = '6';
 
         const valid = Boolean(modality1 && modality2 && modality1 !== modality2 &&
+            validFacePair &&
             (!needsPosition || els.positionGridSelect.value) &&
             (!needsColor || els.colorPaletteSelect.value));
         els.startBtn.disabled = !valid;
