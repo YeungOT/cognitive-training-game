@@ -27,6 +27,15 @@
     <link rel="stylesheet" href="css/unified.css" />
     <script src="js/settings.js"></script>
     <script>try{var r=document.documentElement,t=CognitiveSettingsStore.load(CognitiveSettingsStore.keys.theme).theme==='dark'?'dark':'light',m=document.querySelector('meta[name="theme-color"]');r.setAttribute('data-theme',t);if(m){var s=getComputedStyle(r).getPropertyValue('--container-bg').trim();if(s){m.content=s;}}}catch(e){}</script>
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem('cognitive:post-update-reload')) {
+                    document.documentElement.classList.add('skip-boot-loader');
+                }
+            } catch (error) {}
+        })();
+    </script>
 </head>
 <body>
 
@@ -185,7 +194,7 @@
        ================================================================ -->
     <div class="menu-overlay menu-overlay--center app-screen hidden" id="mainMenu">
         <div class="menu-header">
-            <div class="menu-title"><span class="brain">🧠</span> 認知遊戲</div>
+            <div class="menu-title"><span class="brain">🧠</span> 選擇遊戲</div>
         </div>
         <div class="chrome-btn-left">
             <button class="back-btn" id="foodMainBackBtn" data-app-back="previous" title="返回上一頁"><img class="back-icon" src="assets/icons/back.png" alt="back" /></button>

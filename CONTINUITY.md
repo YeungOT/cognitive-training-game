@@ -2,7 +2,7 @@
 
 ## Snapshot — ≤ 25 lines
 - Goal: add an emotional face–word Stroop game to cognitive-training-pwa using the repaired celebrity expression Face Set.
-- Now: all six celebrity expressions ship; the face modes work; the home screen is now `現實導向 / 認知遊戲 / 手掌跳飛機`, with a flat game library containing every registered game.
+- Now: all six celebrity expressions ship; the face modes work; the home screen is now `現實導向 / 認知遊戲 / 手掌跳飛機`, with a flat game library titled `選擇遊戲` containing every registered game.
 - Next: user browser-verification on a care-home device, then commit/push if desired.
 - Open questions: none for the screen organization. Deferred: broader face-recognition games and the Stroop assessment/summary work. Standing: iPadOS on-device safe-area values UNCONFIRMED.
 
@@ -747,3 +747,12 @@
 - [CODE] N-back and Stroop back paths now return to `mainMenu`; registry order is Food 1, GNG 2, Different 3, Shopping 4, Pairs 5, N-back 6, Stroop 7.
 - [TOOL] Verification: `npm test` 192/192; full `npm run verify` PASS including parity, layout, boot, edge, back, games and offline. `sw.js` regenerated at 506 assets.
 - [CODE] UNCOMMITTED: home/game-library reorganization and verification updates.
+
+- [USER] The `認知遊戲` home tile and destination title repeated the same wording. The destination title is now `選擇遊戲`; the home tile remains `認知遊戲`.
+
+### Post-update loader flash fixed (2026-10-08)
+- [USER] Suspected the second progress-bar problem had regressed or never been fully solved.
+- [CODE] Found a real first-paint window: the post-update reload hid the loader only in `boot.js` at the bottom of the document, so the static loader could paint before the skip ran.
+- [CODE] Added an early head script that marks `html.skip-boot-loader` when the post-update session key exists; CSS hides the loader from first paint. `boot.js` now combines the early class with the consumed session key, and always consumes the key so it cannot leak into later loads.
+- [TOOL] Strengthened `tools/verify-boot.js` to assert the post-update document never paints the loader. Full `npm run verify` PASS: 192/192 tests, one loader cycle, bar 0→100, post-update loader never painted, 506 cached assets, 258 offline images.
+- [CODE] UNCOMMITTED: post-update loader fix and `選擇遊戲` title change.

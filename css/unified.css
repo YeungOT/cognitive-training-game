@@ -332,6 +332,9 @@
         .boot-loader.hidden {
             display: none;
         }
+        html.skip-boot-loader .boot-loader {
+            display: none !important;
+        }
         .boot-loader-content {
             display: flex;
             flex-direction: column;

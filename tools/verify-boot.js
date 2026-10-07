@@ -37,7 +37,7 @@ S.push('    if (!sessionStorage.getItem("__bootloads")) sessionStorage.setItem("
 S.push('    const loads = Number(sessionStorage.getItem("__bootloads")) + 1;');
 S.push('    sessionStorage.setItem("__bootloads", String(loads));');
 S.push('    const log = JSON.parse(sessionStorage.getItem("__bootlog"));');
-S.push('    const state = { docLoads: loads, loaderAfterInit: false, initSeen: false, preInitViolations: [], bars: [] };');
+S.push('    const state = { docLoads: loads, loaderAfterInit: false, loaderEverVisible: false, initSeen: false, preInitViolations: [], bars: [] };');
 S.push('    window.__boot = state;');
 S.push('    const flush = () => { log.push(JSON.parse(JSON.stringify(state))); sessionStorage.setItem("__bootlog", JSON.stringify(log)); };');
 S.push('    setInterval(flush, 150);');
@@ -55,6 +55,7 @@ S.push('        // installs after boot still rewrites bar.style.width on a hidde
 S.push('        // loader, and that is not something the user can see.');
 S.push('        const loaderUp = !loader.classList.contains("hidden") && visible(loader);');
 S.push('        if (loaderUp) {');
+S.push('          state.loaderEverVisible = true;');
 S.push('          const w = bar.style.width || "0%";');
 S.push('          if (state.bars.length === 0 || state.bars[state.bars.length - 1] !== w) state.bars.push(w);');
 S.push('        }');
@@ -166,6 +167,14 @@ function checkLeg(name, snapshots, allowReload) {
 
   if (allowReload && docs.length < 2) {
     fail(name + ': expected the update to reload the page, but it never did');
+  }
+  if (allowReload && docs.length >= 2) {
+    const finalDoc = docs[docs.length - 1];
+    if (finalDoc.loaderEverVisible) {
+      fail(name + ': post-update document painted the loader again');
+    } else {
+      pass(name + ': post-update document never painted the loader');
+    }
   }
 }
 

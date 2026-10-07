@@ -23,7 +23,9 @@
         }
     }
 
-    var skipBootLoader = consumePostUpdateFlag();
+    var earlySkipBootLoader = document.documentElement.classList.contains('skip-boot-loader');
+    var consumedPostUpdateFlag = consumePostUpdateFlag();
+    var skipBootLoader = earlySkipBootLoader || consumedPostUpdateFlag;
     if (skipBootLoader && bootLoader) bootLoader.classList.add('hidden');
 
     var flow = window.CognitiveUpdateFlow.createUpdateFlow({
