@@ -99,6 +99,7 @@
         .menu-grid.menu-cols-4 { --menu-cols: 4; }
         .menu-grid.menu-cols-5 { --menu-cols: 5; --menu-ref-cols: 5; }
         .menu-grid.menu-cols-2 { --menu-cols: 2; }
+        .menu-grid.menu-cols-3 { --menu-cols: 3; }
         .menu-grid.menu-rows-1 { --menu-rows: 1; }
         .menu-grid.menu-rows-2 { --menu-rows: 2; --menu-row-compact-scale: 0.85; }
         .menu-grid .category-btn {

@@ -40,7 +40,7 @@ const VIEWPORTS = [
 const SCREENS = [
     { name: 'palm', group: 'composer', expect: 'palm', steps: ["CognitiveRouter.navigate('palm')"] },
     { name: 'gng', group: 'composer', expect: 'gngGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameGngBtn').click()", "document.getElementById('gngStartBtn').click()"] },
-    { name: 'nback', group: 'composer', expect: 'nbackGame', steps: ["CognitiveRouter.navigate('nbackModeSelect')", "document.getElementById('singleNbackBtn').click()"] },
+    { name: 'nback', group: 'composer', expect: 'nbackGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameNbackBtn').click()", "document.getElementById('singleNbackBtn').click()"] },
     {
         name: 'dual', group: 'composer', expect: 'dualNbackGame',
         steps: [
@@ -62,7 +62,7 @@ const SCREENS = [
     },
     { name: 'different', group: 'composer', expect: 'differentGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameDifferentBtn').click()"] },
     { name: 'pairs', group: 'composer', expect: 'pairsGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gamePairsBtn').click()", "document.getElementById('pairsStartBtn').click()"] },
-    { name: 'stroop', group: 'composer', expect: 'stroopGame', steps: ["document.querySelector('[data-router-target=\"stroopGame\"]').click()"] },
+    { name: 'stroop', group: 'composer', expect: 'stroopGame', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameStroopBtn').click()"] },
     { name: 'reality', group: 'legacy', expect: 'realityBoard', steps: ["CognitiveRouter.navigate('realityBoard')"] }
 ];
 

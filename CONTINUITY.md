@@ -2,9 +2,9 @@
 
 ## Snapshot — ≤ 25 lines
 - Goal: add an emotional face–word Stroop game to cognitive-training-pwa using the repaired celebrity expression Face Set.
-- Now: all six celebrity expressions ship, and GNG, Pairs, Find the Different One, single N-back, and dual N-back have working celebrity-face modes.
-- Next: user browser-verification of the new face modes on a care-home device, then commit/push if desired.
-- Open questions: none for the implemented face modes. Deferred: broader face-recognition games and the Stroop assessment/summary work. Standing: iPadOS on-device safe-area values UNCONFIRMED.
+- Now: all six celebrity expressions ship; the face modes work; the home screen is now `現實導向 / 認知遊戲 / 手掌跳飛機`, with a flat game library containing every registered game.
+- Next: user browser-verification on a care-home device, then commit/push if desired.
+- Open questions: none for the screen organization. Deferred: broader face-recognition games and the Stroop assessment/summary work. Standing: iPadOS on-device safe-area values UNCONFIRMED.
 
 ## Done (recent)
 - 2026-08-21T16:52:30+08:00 [CODE] Fix rotating icon direction: portraitLockTurn 0 → -360deg (anticlockwise) in both games' css/unified.css; sw.js regenerated; pushed both repos (colour 87e40bc, cognitive 61caa8b). Icon is ⟲ (anticlockwise arrow) but previously spun clockwise.
@@ -739,3 +739,11 @@
 - [TOOL] Verification: `npm test` 192/192; full `npm run verify` PASS including parity, layout, boot, edge, back, games and offline. Offline cache: 506 assets, 420 stable media, 258 offline images checked, 0 failures. `sw.js` regenerated.
 - [ASSUMPTION] Existing files `gng.js`, `different.js`, `nback.js`, `dual-nback.js` and `pairs.js` remain above the repository's 300-line guideline; this feature added to those pre-existing shapes rather than performing an unrelated split refactor.
 - [CODE] UNCOMMITTED: all face-mode implementation, tests, ledger and regenerated `sw.js`, on top of commits `112dabf` and `9a94e83`.
+
+### Flat cognitive game library (2026-10-07)
+- [USER] Chose Option 2: one flat game library instead of a `食物遊戲` parent containing non-food games.
+- [CODE] Home reduced to three tiles: `現實導向`, `認知遊戲`, `手掌跳飛機`. Removed the direct N-back and `情緒反應` home tiles.
+- [CODE] `mainMenu` is now titled `認知遊戲` and uses a 4x2 grid. Registered N-back and Stroop in the shared game registry so the library contains Food, GNG, Different, Shopping, Pairs, N-back and 情緒反應.
+- [CODE] N-back and Stroop back paths now return to `mainMenu`; registry order is Food 1, GNG 2, Different 3, Shopping 4, Pairs 5, N-back 6, Stroop 7.
+- [TOOL] Verification: `npm test` 192/192; full `npm run verify` PASS including parity, layout, boot, edge, back, games and offline. `sw.js` regenerated at 506 assets.
+- [CODE] UNCOMMITTED: home/game-library reorganization and verification updates.

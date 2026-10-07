@@ -336,7 +336,7 @@
 
         if (router) {
             router.defineScreen('nbackModeSelect', {
-                back: 'home'
+                back: 'mainMenu'
             });
             router.defineScreen('dualNbackSettings', {
                 back: 'nbackModeSelect'

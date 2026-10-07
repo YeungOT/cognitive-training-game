@@ -20,7 +20,7 @@ const SCREENS = [
     // so click the real tile rather than calling navigate() directly.
     { name: 'palm', backId: 'palmBackBtn', expectBackTo: 'home', steps: ["document.querySelector('[data-router-target=\"palm\"]').click()"] },
     { name: 'gng', backId: 'gngBackBtn', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameGngBtn').click()", "document.getElementById('gngStartBtn').click()"] },
-    { name: 'nback', backId: 'nbackBackBtn', steps: ["CognitiveRouter.navigate('nbackModeSelect')", "document.getElementById('singleNbackBtn').click()"] },
+    { name: 'nback', backId: 'nbackBackBtn', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameNbackBtn').click()", "document.getElementById('singleNbackBtn').click()"] },
     {
         name: 'dual',
         backId: 'dualNbackBackBtn',
@@ -44,7 +44,7 @@ const SCREENS = [
     },
     { name: 'different', backId: 'differentBackBtn', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameDifferentBtn').click()"] },
     { name: 'pairs', backId: 'pairsBackBtn', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gamePairsBtn').click()", "document.getElementById('pairsStartBtn').click()"] },
-    { name: 'stroop', backId: 'stroopBackBtn', expectBackTo: 'home', steps: ["document.querySelector('[data-router-target=\"stroopGame\"]').click()"] },
+    { name: 'stroop', backId: 'stroopBackBtn', expectBackTo: 'mainMenu', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameStroopBtn').click()"] },
     { name: 'reality', backId: 'realityBackBtn', steps: ["CognitiveRouter.navigate('realityBoard')"] }
 ];
 

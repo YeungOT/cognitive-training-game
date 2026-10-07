@@ -344,6 +344,14 @@
 
     if (typeof window !== 'undefined') {
         window.CognitiveNback = api;
+        window.CognitiveGames.register({
+            id: 'nback',
+            title: 'N-back',
+            icon: '🧩',
+            entryRoute: 'nbackModeSelect',
+            buttonId: 'gameNbackBtn',
+            menuOrder: 6
+        });
         // Transitional self-mount preserving the original load-time behaviour.
         // Later strangler steps move this call into the router/orchestrator.
         api.mount(document, {

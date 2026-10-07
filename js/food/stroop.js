@@ -165,7 +165,7 @@
             router.defineScreen('stroopGame', {
                 enter: onEnterGame,
                 exit: pauseStroop,
-                back: 'home'
+                back: 'mainMenu'
             });
         }
 
@@ -186,6 +186,14 @@
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     if (typeof window !== 'undefined') {
         window.CognitiveStroop = api;
+        window.CognitiveGames.register({
+            id: 'stroop',
+            title: '情緒反應',
+            icon: '🎭',
+            entryRoute: 'stroopGame',
+            buttonId: 'gameStroopBtn',
+            menuOrder: 7
+        });
         if (global.CognitiveStroopScreen && global.CognitiveGameScreen) {
             api.mount(document, {
                 faceSet: global.CognitiveCelebrityFaces,

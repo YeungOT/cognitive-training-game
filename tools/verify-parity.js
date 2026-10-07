@@ -24,7 +24,7 @@ const VIEWPORTS = [
 const GAMES = [
     { name: 'palm', steps: ["CognitiveRouter.navigate('palm')"] },
     { name: 'gng', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameGngBtn').click()", "document.getElementById('gngStartBtn').click()"] },
-    { name: 'nback', steps: ["CognitiveRouter.navigate('nbackModeSelect')", "document.getElementById('singleNbackBtn').click()"] },
+    { name: 'nback', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameNbackBtn').click()", "document.getElementById('singleNbackBtn').click()"] },
     {
         name: 'dual',
         steps: [
@@ -35,7 +35,7 @@ const GAMES = [
             "document.getElementById('dualStartBtn').click()"
         ]
     },
-    { name: 'stroop', steps: ["document.querySelector('[data-router-target=\"stroopGame\"]').click()"] }
+    { name: 'stroop', steps: ["CognitiveRouter.navigate('mainMenu')", "document.getElementById('gameStroopBtn').click()"] }
 ];
 
 // The composer appends top bar, stage, footer in that order, so the stage is the
