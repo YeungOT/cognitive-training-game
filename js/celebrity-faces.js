@@ -29,9 +29,7 @@
         { key: 'disgust', label: '厭惡', fileSuffix: 'disgust', valence: -1, arousal: 'high' }
     ];
 
-    // v1 ships only the expressions the game can currently show. The full
-    // expression list above still defines the domain for later games.
-    var SHIPPED_EXPRESSION_KEYS = ['happy', 'sad'];
+    var SHIPPED_EXPRESSION_KEYS = ['neutral', 'happy', 'sad', 'angry', 'fear', 'disgust'];
 
     function freezeRecord(record) {
         return Object.freeze(record);
